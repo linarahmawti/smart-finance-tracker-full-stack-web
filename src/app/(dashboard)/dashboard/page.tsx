@@ -118,7 +118,7 @@ export default function DashboardPage() {
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-800 p-5 sm:p-7 text-white shadow-xl shadow-blue-500/20 transition-all">
           <div className="flex items-center justify-between opacity-90">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-100">
-              Total Balance Aloka
+              Total Balance Smart Finance
             </span>
             <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md">
               <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
@@ -336,19 +336,19 @@ export default function DashboardPage() {
               >
                 <div>
                   {/* Pocket Header */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <div
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
                         style={{ backgroundColor: pocket.color }}
                       >
                         <IconRenderer name={pocket.icon} size={20} />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4 className="truncate font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {pocket.name}
                         </h4>
-                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="line-clamp-2 break-words truncate text-xs text-zinc-500 dark:text-zinc-400">
                           {pocket.description || "Kantong Keuangan"}
                         </p>
                       </div>

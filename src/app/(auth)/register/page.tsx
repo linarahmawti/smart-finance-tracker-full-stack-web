@@ -54,7 +54,7 @@ export default function RegisterPage() {
         toast.error(error.message || 'Gagal mendaftar');
       } else {
         if (data?.session) {
-          toast.success('Pendaftaran berhasil! Selamat datang di Aloka Finance.');
+          toast.success('Pendaftaran berhasil! Selamat datang di Smart Finance.');
           router.push('/dashboard');
         } else {
           toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi atau login.');

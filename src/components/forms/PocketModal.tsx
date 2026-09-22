@@ -140,6 +140,7 @@ export function PocketModal({ isOpen, onClose, pocketToEdit }: PocketModalProps)
                 value={field.value}
                 onChange={field.onChange}
                 placeholder="0"
+                labelClassName="min-h-[32px]"
               />
             )}
           />
@@ -153,6 +154,7 @@ export function PocketModal({ isOpen, onClose, pocketToEdit }: PocketModalProps)
                 value={field.value}
                 onChange={field.onChange}
                 placeholder="0"
+                labelClassName="min-h-[32px]"
               />
             )}
           />

@@ -26,7 +26,7 @@ export function InstallPWA({
     return (
       <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
         <Check className="h-4 w-4" />
-        <span>Aloka sudah terinstall</span>
+        <span>Smart Finance sudah terinstall</span>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function InstallPWA({
     try {
       const accepted = await install();
       if (accepted) {
-        toast.success('Aloka Finance berhasil dipasang di perangkat Anda!');
+        toast.success('Smart Finance berhasil dipasang di perangkat Anda!');
       }
     } finally {
       setIsInstalling(false);
@@ -71,7 +71,7 @@ export function InstallPWA({
       leftIcon={showIcon ? <Download className="h-4 w-4" /> : undefined}
       className={className}
     >
-      Install Aloka
+      Install Smart Finance
     </Button>
   );
 }

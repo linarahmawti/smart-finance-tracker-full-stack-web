@@ -121,17 +121,17 @@ export default function SettingsPage() {
             <span>Aplikasi</span>
           </CardTitle>
           <CardDescription>
-            Pasang Aloka di perangkat untuk akses lebih cepat seperti aplikasi native.
+            Pasang Smart Finance di perangkat untuk akses lebih cepat seperti aplikasi native.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-zinc-200/60 bg-zinc-50/50 dark:border-zinc-800/60 dark:bg-zinc-800/30">
             <div className="space-y-0.5">
               <div className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                <span>📱 Install Aloka</span>
+                <span>📱 Install Smart Finance</span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Pasang Aloka di perangkat untuk akses lebih cepat seperti aplikasi.
+                Pasang Smart Finance di perangkat untuk akses lebih cepat seperti aplikasi.
               </p>
             </div>
 
@@ -139,7 +139,7 @@ export default function SettingsPage() {
               {isInstalled || isStandalone ? (
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-2 rounded-xl border border-emerald-200/60 dark:border-emerald-900/60">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>✓ Aloka sudah terinstall</span>
+                  <span>✓ Smart Finance sudah terinstall</span>
                 </div>
               ) : canInstall ? (
                 <InstallPWA variant="primary" size="sm" />

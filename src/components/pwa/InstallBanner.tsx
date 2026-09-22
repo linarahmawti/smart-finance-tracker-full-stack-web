@@ -52,7 +52,7 @@ export function InstallBanner() {
       try {
         const accepted = await install();
         if (accepted) {
-          toast.success('Aloka Finance berhasil dipasang di perangkat!');
+          toast.success('Smart Finance berhasil dipasang di perangkat!');
           setIsDismissed(true);
         }
       } finally {
@@ -78,13 +78,13 @@ export function InstallBanner() {
           </div>
           <div>
             <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-              <span>📱 Install Aloka</span>
+              <span>📱 Install Smart Finance</span>
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                 {isAndroid ? 'Android PWA' : isIOS ? 'iOS PWA' : 'PWA App'}
               </span>
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-              Gunakan Aloka seperti aplikasi native di {isAndroid ? 'Android' : isIOS ? 'iPhone' : 'perangkatmu'}. Akses cepat dari Home Screen.
+              Gunakan Smart Finance seperti aplikasi native di {isAndroid ? 'Android' : isIOS ? 'iPhone' : 'perangkatmu'}. Akses cepat dari Home Screen.
             </p>
           </div>
         </div>

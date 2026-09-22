@@ -29,7 +29,7 @@ export function NavigationLoadingProvider({ children }: { children: React.ReactN
   return (
     <React.Suspense fallback={<Loading variant="page" message="Memuat..." />}>
       {isLoading && (
-        <Loading variant="overlay" message="Memuat menu Aloka..." />
+        <Loading variant="overlay" message="Memuat menu Smart Finance..." />
       )}
       {children}
     </React.Suspense>

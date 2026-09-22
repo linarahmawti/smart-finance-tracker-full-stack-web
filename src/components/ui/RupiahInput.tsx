@@ -7,6 +7,7 @@ export interface RupiahInputProps
   value: number;
   onChange: (value: number) => void;
   label?: string;
+  labelClassName?: string;
   error?: string;
   helperText?: string;
 }
@@ -15,6 +16,7 @@ export function RupiahInput({
   value,
   onChange,
   label,
+  labelClassName,
   error,
   helperText,
   className,
@@ -37,7 +39,10 @@ export function RupiahInput({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
+          className={cn(
+            'block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300',
+            labelClassName
+          )}
         >
           {label}
         </label>

@@ -34,8 +34,9 @@ export function AppHeader() {
     if (pathname.startsWith('/pockets')) return 'Kantong Dana';
     if (pathname.startsWith('/categories')) return 'Kategori';
     if (pathname.startsWith('/history')) return 'Riwayat';
+    if (pathname.startsWith('/predict')) return 'Prediksi';
     if (pathname.startsWith('/settings')) return 'Pengaturan';
-    return 'Aloka Finance';
+    return 'Smart Finance';
   };
 
   return (
