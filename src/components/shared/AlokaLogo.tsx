@@ -30,7 +30,7 @@ export function AlokaLogo({ className, size = 'md', showText = true }: AlokaLogo
       <div className="relative shrink-0 flex items-center justify-center">
         <Image
           src="/images/logoo.png"
-          alt="Aloka Finance Logo"
+          alt="Smart Finance Logo"
           width={px}
           height={px}
           style={{ width: 'auto', height: 'auto' }}

@@ -1,4 +1,4 @@
-// Aloka Finance - Service Worker (Safe & Production-Ready)
+// Smart Finance - Service Worker (Safe & Production-Ready)
 const CACHE_NAME = 'aloka-finance-v1';
 
 // Static assets safe for pre-caching

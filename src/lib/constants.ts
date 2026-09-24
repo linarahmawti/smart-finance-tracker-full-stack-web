@@ -1,4 +1,4 @@
-export const APP_NAME = 'Aloka Finance';
+export const APP_NAME = 'Smart Finance';
 export const APP_DESCRIPTION = 'Personal Finance & Pocket Tracker';
 
 export const POCKET_COLORS = [

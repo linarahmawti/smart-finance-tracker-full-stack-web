@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Loading — Unified loading indicator component for Aloka Finance.
+ * Loading — Unified loading indicator component for Smart Finance.
  *
  * Variants:
  *   - "page"     : Full center layout with Aloka logo, glow, and progress bar. Ideal for page-level loading.

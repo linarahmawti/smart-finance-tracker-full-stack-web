@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Aloka Finance',
+    name: 'Smart Finance',
     short_name: 'Aloka',
     description: 'Kelola pemasukan, pengeluaran, tabungan, dan kantong dana dengan mudah.',
     start_url: '/',

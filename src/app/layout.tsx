@@ -24,17 +24,17 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Aloka Finance — Aplikasi Pengelola & Catatan Keuangan Pribadi",
-    template: "%s | Aloka Finance",
+    default: "Smart Finance — Aplikasi Pengelola & Catatan Keuangan Pribadi",
+    template: "%s | Smart Finance",
   },
   description:
     "Kelola pemasukan, pengeluaran, tabungan, dan kantong dana dengan mudah.",
-  applicationName: "Aloka Finance",
-  authors: [{ name: "Aloka Finance Team" }],
+  applicationName: "Smart Finance",
+  authors: [{ name: "Smart Finance Team" }],
   generator: "Next.js",
   manifest: "/manifest.webmanifest",
   keywords: [
-    "Aloka Finance",
+    "Smart Finance",
     "Personal Finance App",
     "Aplikasi Keuangan Pribadi",
     "Catat Pemasukan Pengeluaran",
@@ -43,8 +43,8 @@ export const metadata: Metadata = {
     "Kalkulator Tabungan",
     "PWA Finance",
   ],
-  creator: "Aloka",
-  publisher: "Aloka Finance",
+  creator: "Smart",
+  publisher: "Smart Finance",
   robots: {
     index: true,
     follow: true,
@@ -61,14 +61,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     url: "https://aloka-finance.vercel.app",
-    title: "Aloka Finance — Personal Finance & Pocket Tracker",
+    title: "Smart Finance — Personal Finance & Pocket Tracker",
     description:
       "Kelola pemasukan, pengeluaran, tabungan, dan kantong dana dengan mudah.",
-    siteName: "Aloka Finance",
+    siteName: "Smart Finance",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aloka Finance — Personal Finance & Pocket Tracker",
+    title: "Smart Finance — Personal Finance & Pocket Tracker",
     description:
       "Kelola pemasukan, pengeluaran, tabungan, dan kantong dana dengan mudah.",
   },

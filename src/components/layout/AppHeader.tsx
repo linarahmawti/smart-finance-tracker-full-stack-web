@@ -55,7 +55,7 @@ export function AppHeader() {
 
           <div className="min-w-0 truncate">
             <div className="lg:hidden text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-              Aloka Finance
+              Smart Finance
             </div>
             <h1 className="truncate text-sm sm:text-base md:text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-100">
               {getPageTitle()}

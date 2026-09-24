@@ -105,7 +105,7 @@ export default function DashboardPage() {
               Selamat Datang 👋
             </div>
             <h2 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-              {summary.total_balance > 0 ? "Keuangan Pribadi" : "Aloka Finance"}
+              {summary.total_balance > 0 ? "Keuangan Pribadi" : "Smart Finance"}
             </h2>
           </div>
         </div>

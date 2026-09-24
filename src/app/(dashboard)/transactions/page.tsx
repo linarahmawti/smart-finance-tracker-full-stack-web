@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useFinance } from '@/context/FinanceContext';
 import { formatRupiah, formatDate } from '@/lib/formatters';
 import { Card } from '@/components/ui/Card';
@@ -19,6 +20,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Trash2,
+  Tags,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function TransactionsPage() {
@@ -143,31 +146,28 @@ export default function TransactionsPage() {
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         <button
           onClick={() => setTypeFilter('all')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all active:scale-95 ${
-            typeFilter === 'all'
+          className={`rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all active:scale-95 ${typeFilter === 'all'
               ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
               : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-          }`}
+            }`}
         >
           Semua Tipe
         </button>
         <button
           onClick={() => setTypeFilter('income')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all active:scale-95 ${
-            typeFilter === 'income'
+          className={`rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all active:scale-95 ${typeFilter === 'income'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-          }`}
+            }`}
         >
           + Pemasukan
         </button>
         <button
           onClick={() => setTypeFilter('expense')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all active:scale-95 ${
-            typeFilter === 'expense'
+          className={`rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all active:scale-95 ${typeFilter === 'expense'
               ? 'bg-rose-600 text-white shadow-sm'
               : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-          }`}
+            }`}
         >
           - Pengeluaran
         </button>
@@ -231,6 +231,17 @@ export default function TransactionsPage() {
                 </option>
               ))}
             </select>
+            <Link
+              href="/categories"
+              className="mt-2 flex items-center justify-between rounded-xl px-1 py-2 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              <span className="flex items-center gap-2">
+                <Tags className="h-4 w-4" />
+                Kelola Kategori
+              </span>
+
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
 
@@ -305,11 +316,10 @@ export default function TransactionsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${
-                              isIncome
+                            className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${isIncome
                                 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
                                 : 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'
-                            }`}
+                              }`}
                           >
                             {isIncome ? (
                               <ArrowDownLeft className="h-4 w-4 stroke-[2.5]" />
@@ -348,11 +358,10 @@ export default function TransactionsPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span
-                          className={`font-bold font-number text-sm ${
-                            isIncome
+                          className={`font-bold font-number text-sm ${isIncome
                               ? 'text-emerald-600 dark:text-emerald-400'
                               : 'text-rose-600 dark:text-rose-400'
-                          }`}
+                            }`}
                         >
                           {isIncome ? `+${formatRupiah(tx.amount)}` : `-${formatRupiah(tx.amount)}`}
                         </span>
@@ -385,11 +394,10 @@ export default function TransactionsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-                          isIncome
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${isIncome
                             ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
                             : 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'
-                        }`}
+                          }`}
                       >
                         {isIncome ? (
                           <ArrowDownLeft className="h-5 w-5 stroke-[2.5]" />
@@ -411,11 +419,10 @@ export default function TransactionsPage() {
 
                     <div className="text-right shrink-0">
                       <div
-                        className={`font-bold font-number text-sm ${
-                          isIncome
+                        className={`font-bold font-number text-sm ${isIncome
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : 'text-rose-600 dark:text-rose-400'
-                        }`}
+                          }`}
                       >
                         {isIncome ? `+${formatRupiah(tx.amount)}` : `-${formatRupiah(tx.amount)}`}
                       </div>

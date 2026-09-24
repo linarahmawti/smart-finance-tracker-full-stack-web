@@ -18,8 +18,8 @@ export function MobileNav() {
   const bottomNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Transaksi', href: '/transactions', icon: ArrowLeftRight },
-    { name: 'Kantong', href: '/pockets', icon: Wallet },
     { name: 'Prediksi', href: '/predict', icon: Sparkles },
+    { name: 'Kantong', href: '/pockets', icon: Wallet },
     { name: 'Riwayat', href: '/history', icon: History },
   ];
 
