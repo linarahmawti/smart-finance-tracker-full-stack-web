@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { PWAProvider } from "@/components/pwa/PWAProvider";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -76,7 +75,7 @@ export const metadata: Metadata = {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-      { url: "/images/logoo.png", type: "image/png" },
+      { url: "/images/logo-smart-finance1.png", type: "image/png" },
       { url: "/favicon.png", type: "image/png" },
       { url: "/favicon.ico" },
     ],
@@ -95,7 +94,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" suppressHydrationWarning className={poppins.variable}>
+    <html lang="id" suppressHydrationWarning className={inter.variable}>
       <head>
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="mobile-web-app-capable" content="yes" />

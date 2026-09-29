@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="public/images/logoo.png" alt="Aloka Finance Logo" width="100" />
-  <h1>Aloka Finance — Personal Finance & Pocket Tracker</h1>
+  <img src="public/images/logo-smart-finance2.png" alt="Smart Finance Logo" width="220" />
+  <h1>Smart Finance — Personal Finance & Pocket Tracker</h1>
   <p>Aplikasi web modern pencatat dan pengelola keuangan pribadi berbasis kantong dana (<em>pockets</em>), arus kas harian, dan target tabungan.</p>
 
   <p>
@@ -227,7 +227,8 @@ aloka/
 │   ├── favicon.png
 │   ├── icon.png
 │   └── images/
-│       └── logoo.png           # Logo resmi 3D Aloka Finance
+│       ├── logo-smart-finance1.png # Icon logo resmi Smart Finance
+│       └── logo-smart-finance2.png # Full logo resmi Smart Finance
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/             # Halaman Autentikasi (login, register, forgot-password)

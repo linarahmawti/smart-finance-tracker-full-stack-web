@@ -1,11 +1,12 @@
 // Smart Finance - Service Worker (Safe & Production-Ready)
-const CACHE_NAME = 'aloka-finance-v1';
+const CACHE_NAME = 'smart-finance-v1';
 
 // Static assets safe for pre-caching
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/images/logoo.png',
+  '/images/logo-smart-finance1.png',
+  '/images/logo-smart-finance2.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/favicon.ico',

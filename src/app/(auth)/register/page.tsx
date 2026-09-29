@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { AlokaLogo } from '@/components/shared/AlokaLogo';
+import { SmartFinanceLogo } from '@/components/shared/SmartFinanceLogo';
 import { Lock, Mail, User, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -80,7 +80,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Header Branding */}
         <div className="flex flex-col items-center text-center space-y-2">
-          <AlokaLogo size="lg" className="mb-2" />
+          <SmartFinanceLogo size="lg" className="mb-2" />
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
             Buat Akun Baru
           </h1>

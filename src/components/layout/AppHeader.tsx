@@ -7,7 +7,6 @@ import { useFinance } from '@/context/FinanceContext';
 import { PERIOD_OPTIONS } from '@/lib/constants';
 import { PeriodFilter } from '@/types/finance';
 import { Button } from '@/components/ui/Button';
-import { AlokaLogo } from '@/components/shared/AlokaLogo';
 import { QuickActionModal } from '@/components/shared/QuickActionModal';
 import {
   Sun,

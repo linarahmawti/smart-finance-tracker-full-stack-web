@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlokaLogo } from '@/components/shared/AlokaLogo';
+import { SmartFinanceLogo } from '@/components/shared/SmartFinanceLogo';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, Home, ArrowLeftRight } from 'lucide-react';
 
@@ -8,7 +8,7 @@ export default function NotFound() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 p-4 sm:p-6 text-center">
       <div className="w-full max-w-md space-y-6">
         <div className="flex justify-center">
-          <AlokaLogo size="lg" />
+          <SmartFinanceLogo size="lg" />
         </div>
 
         {/* 404 Badge & Visual */}

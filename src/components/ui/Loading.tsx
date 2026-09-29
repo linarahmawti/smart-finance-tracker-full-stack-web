@@ -4,7 +4,7 @@
  * Loading — Unified loading indicator component for Smart Finance.
  *
  * Variants:
- *   - "page"     : Full center layout with Aloka logo, glow, and progress bar. Ideal for page-level loading.
+ *   - "page"     : Full center layout with Smart Finance logo, glow, and progress bar. Ideal for page-level loading.
  *   - "overlay"  : Fixed fullscreen overlay with blur. Ideal for route transition loading.
  *   - "spinner"  : Compact inline animated spinner. Ideal inside buttons, cards, or small sections.
  *   - "bar"      : Slim animated progress bar only. Ideal for top-of-page or section loaders.
@@ -21,7 +21,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { AlokaLogo } from '@/components/shared/AlokaLogo';
+import { SmartFinanceLogo } from '@/components/shared/SmartFinanceLogo';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -89,13 +89,12 @@ function LogoLayout({
       <div className="relative flex items-center justify-center">
         <div className="absolute h-24 w-24 rounded-full bg-blue-500/25 dark:bg-blue-400/20 blur-2xl animate-pulse" />
         <div className="relative transition-transform hover:scale-105">
-          <AlokaLogo size="xl" showText={false} />
+          <SmartFinanceLogo size="xl" showText={false} />
         </div>
       </div>
 
-      {/* Branded label & bar */}
+      {/* Branded progress bar & status */}
       <div className="flex flex-col items-center space-y-3 text-center max-w-xs">
-        <AlokaLogo size="sm" showText />
         <ProgressBar />
         <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 tracking-wide animate-pulse">
           {message}

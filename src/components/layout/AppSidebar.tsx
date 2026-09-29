@@ -18,7 +18,7 @@ import {
   TrendingUp,
   Sparkles,
 } from 'lucide-react';
-import { AlokaLogo } from '@/components/shared/AlokaLogo';
+import { SmartFinanceLogo } from '@/components/shared/SmartFinanceLogo';
 import { PocketModal } from '@/components/forms/PocketModal';
 
 export function AppSidebar() {
@@ -42,7 +42,7 @@ export function AppSidebar() {
         {/* Logo & Brand */}
         <div className="flex h-16 items-center justify-between px-6 border-b border-zinc-100 dark:border-zinc-800">
           <Link href="/dashboard" className="group">
-            <AlokaLogo size="md" />
+            <SmartFinanceLogo size="md" />
           </Link>
         </div>
 
