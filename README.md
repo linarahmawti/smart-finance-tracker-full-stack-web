@@ -28,7 +28,7 @@
 
 ## 🌟 Tentang Aplikasi
 
-**Aloka Finance** dirancang untuk membantu Anda mengatur arus keuangan pribadi dengan konsep **"Kantong Dana" (Pockets)**. Dengan membagi uang ke dalam pos-pos terpisah (misalnya: *Kebutuhan Pokok, Tabungan Liburan, Dana Darurat, Tagihan Bulanan*), Anda dapat:
+**Smart Finance** dirancang untuk membantu Anda mengatur arus keuangan pribadi dengan konsep **"Kantong Dana" (Pockets)**. Dengan membagi uang ke dalam pos-pos terpisah (misalnya: *Kebutuhan Pokok, Tabungan Liburan, Dana Darurat, Tagihan Bulanan*), Anda dapat:
 - Mengetahui alokasi uang secara akurat.
 - Menghindari pengeluaran berlebih (*overbudget*).
 - Memantau perkembangan target tabungan secara visual.
@@ -126,7 +126,7 @@ Sehingga pengguna hanya dapat membaca, mengubah, atau menghapus data milik akun 
 ### 2. Kloning Repositori & Install Dependencies
 ```bash
 # Masuk ke direktori proyek
-cd aloka
+cd smart-finance
 
 # Install seluruh dependencies
 npm install
@@ -170,7 +170,7 @@ Buka peramban Anda di **[http://localhost:3000](http://localhost:3000)**.
 ## 📖 Panduan Cara Penggunaan
 
 ```
-Alur Penggunaan Aloka Finance:
+Alur Penggunaan Smart Finance:
 ┌─────────────────┐     ┌───────────────────┐     ┌────────────────────────┐
 │ 1. Buat Akun /  │ ──> │ 2. Buat Kantong   │ ──> │ 3. Buat Kategori       │
 │    Login        │     │    Dana (Pockets) │     │    Pemasukan & Belanja │
@@ -220,7 +220,7 @@ Alur Penggunaan Aloka Finance:
 ## 📂 Struktur Direktori Proyek
 
 ```
-aloka/
+Smart-Finance/
 ├── drizzle/                    # File hasil generate migrasi SQL Drizzle
 ├── public/
 │   ├── favicon.ico             # Favicon tab browser
@@ -281,5 +281,5 @@ aloka/
 
 <div align="center">
   <p>Dibuat dengan ❤️ untuk kemudahan pengelolaan finansial pribadi.</p>
-  <p><strong>Aloka Finance &copy; 2026</strong></p>
+  <p><strong>Smart Finance &copy; 2026</strong></p>
 </div>
