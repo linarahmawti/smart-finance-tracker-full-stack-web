@@ -57,3 +57,5 @@ export function AlokaLogo({ className, size = 'md', showText = true }: AlokaLogo
     </div>
   );
 }
+
+export const SmartFinanceLogo = AlokaLogo;

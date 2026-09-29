@@ -1,17 +1,19 @@
 'use client';
 
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 import { usePWA } from './PWAProvider';
 import { Button } from '@/components/ui/Button';
 import { Smartphone, X, Download, Share, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
-const STORAGE_KEY = 'aloka_pwa_dismissed_timestamp';
-const DISMISS_DURATION_DAYS = 7;
+const REGISTER_FLAG = 'smart_finance_just_registered';
+const SEEN_FLAG = 'smart_finance_pwa_registered_prompt_seen';
 
 export function InstallBanner() {
+  const pathname = usePathname();
   const { canInstall, isInstalled, isIOS, isAndroid, isStandalone, install } = usePWA();
-  const [isDismissed, setIsDismissed] = React.useState(true);
+  const [shouldShow, setShouldShow] = React.useState(false);
   const [isInstalling, setIsInstalling] = React.useState(false);
   const [showAndroidGuide, setShowAndroidGuide] = React.useState(false);
   const [showIOSModal, setShowIOSModal] = React.useState(false);
@@ -19,23 +21,25 @@ export function InstallBanner() {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const dismissedTime = localStorage.getItem(STORAGE_KEY);
-    if (dismissedTime) {
-      const parsedTime = parseInt(dismissedTime, 10);
-      const now = Date.now();
-      const diffDays = (now - parsedTime) / (1000 * 60 * 60 * 24);
-      if (diffDays < DISMISS_DURATION_DAYS) {
-        setIsDismissed(true);
-        return;
-      }
+    // Sesuai requirement: Hanya muncul di awal setelah user baru registrasi,
+    // dan hanya ditampilkan di halaman utama dashboard.
+    // Di halaman lain (seperti Kategori, Transaksi, dll.) dan setelahnya TIDAK AKAN MUNCUL,
+    // melainkan hanya tersedia di menu Pengaturan (/settings).
+    const isJustRegistered = localStorage.getItem(REGISTER_FLAG) === 'true';
+    const isAlreadySeen = localStorage.getItem(SEEN_FLAG) === 'true';
+
+    if (pathname === '/dashboard' && isJustRegistered && !isAlreadySeen) {
+      setShouldShow(true);
+    } else {
+      setShouldShow(false);
     }
-    setIsDismissed(false);
-  }, []);
+  }, [pathname]);
 
   const handleDismiss = () => {
-    setIsDismissed(true);
+    setShouldShow(false);
     try {
-      localStorage.setItem(STORAGE_KEY, Date.now().toString());
+      localStorage.removeItem(REGISTER_FLAG);
+      localStorage.setItem(SEEN_FLAG, 'true');
     } catch {
       // safe fallback
     }
@@ -53,7 +57,7 @@ export function InstallBanner() {
         const accepted = await install();
         if (accepted) {
           toast.success('Smart Finance berhasil dipasang di perangkat!');
-          setIsDismissed(true);
+          handleDismiss();
         }
       } finally {
         setIsInstalling(false);
@@ -63,8 +67,8 @@ export function InstallBanner() {
     }
   };
 
-  // Don't show if already installed or standalone mode or dismissed
-  if (isInstalled || isStandalone || isDismissed) {
+  // Jangan tampilkan jika sudah terinstall, mode standalone, atau tidak memenuhi syarat registrasi baru
+  if (isInstalled || isStandalone || !shouldShow) {
     return null;
   }
 
@@ -78,13 +82,13 @@ export function InstallBanner() {
           </div>
           <div>
             <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-              <span>📱 Install Smart Finance</span>
+              <span>📱 Pasang Smart Finance di Perangkat Anda</span>
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                {isAndroid ? 'Android PWA' : isIOS ? 'iOS PWA' : 'PWA App'}
+                Pengguna Baru
               </span>
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-              Gunakan Smart Finance seperti aplikasi native di {isAndroid ? 'Android' : isIOS ? 'iPhone' : 'perangkatmu'}. Akses cepat dari Home Screen.
+              Selamat datang! Pasang Smart Finance di {isAndroid ? 'Android' : isIOS ? 'iPhone' : 'perangkatmu'} untuk akses cepat dari layar utama. Anda juga dapat memasang aplikasi ini kapan saja melalui menu <strong>Pengaturan</strong>.
             </p>
           </div>
         </div>
@@ -100,6 +104,15 @@ export function InstallBanner() {
             className="font-semibold text-xs shadow-sm shadow-blue-600/20"
           >
             {isIOS ? 'Cara Pasang di iOS' : 'Install Sekarang'}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDismiss}
+            className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Nanti Saja
           </Button>
 
           <button

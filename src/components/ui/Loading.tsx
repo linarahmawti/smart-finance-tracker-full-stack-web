@@ -79,7 +79,7 @@ function ProgressBar({ className }: { className?: string }) {
 }
 
 function LogoLayout({
-  message = 'Memuat data Aloka...',
+  message = 'Memuat data Smart Finance...',
 }: {
   message?: string;
 }) {
@@ -111,7 +111,7 @@ function LogoLayout({
 
 export function Loading({
   variant = 'page',
-  message = 'Memuat data Aloka...',
+  message = 'Memuat data Smart Finance...',
   fullScreen = false,
   size = 'md',
   className,

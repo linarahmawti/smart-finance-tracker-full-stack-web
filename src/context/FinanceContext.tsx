@@ -62,6 +62,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Local storage / state backing
+  const isSeedingRef = React.useRef(false);
   const [rawPockets, setRawPockets] = useState<Pocket[]>([]);
   const [rawCategories, setRawCategories] = useState<Category[]>([]);
   const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
@@ -144,23 +145,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Auto-seed default categories if account has no categories
-        if (categoriesData.length === 0) {
-          const defaultCategories = [
-            { user_id: currentUser.id, name: 'Gaji Pokok', type: 'income', icon: 'Briefcase', color: '#10B981', is_default: true },
-            { user_id: currentUser.id, name: 'Bonus & Freelance', type: 'income', icon: 'Sparkles', color: '#3B82F6', is_default: false },
-            { user_id: currentUser.id, name: 'Lainnya', type: 'income', icon: 'Coins', color: '#64748B', is_default: false },
-            { user_id: currentUser.id, name: 'Makanan & Minuman', type: 'expense', icon: 'Utensils', color: '#F59E0B', is_default: true },
-            { user_id: currentUser.id, name: 'Belanja Kebutuhan', type: 'expense', icon: 'ShoppingBag', color: '#EC4899', is_default: false },
-            { user_id: currentUser.id, name: 'Transportasi', type: 'expense', icon: 'Car', color: '#06B6D4', is_default: false },
-            { user_id: currentUser.id, name: 'Tagihan & Utilities', type: 'expense', icon: 'Receipt', color: '#8B5CF6', is_default: false },
-            { user_id: currentUser.id, name: 'Hiburan & Gaya Hidup', type: 'expense', icon: 'Gamepad2', color: '#F43F5E', is_default: false },
-          ];
+        if (categoriesData.length === 0 && !isSeedingRef.current) {
+          isSeedingRef.current = true;
+          try {
+            const defaultCategories = [
+              { user_id: currentUser.id, name: 'Gaji Pokok', type: 'income', icon: 'Briefcase', color: '#10B981', is_default: true },
+              { user_id: currentUser.id, name: 'Bonus & Freelance', type: 'income', icon: 'Sparkles', color: '#3B82F6', is_default: false },
+              { user_id: currentUser.id, name: 'Lainnya', type: 'income', icon: 'Coins', color: '#64748B', is_default: false },
+              { user_id: currentUser.id, name: 'Makanan & Minuman', type: 'expense', icon: 'Utensils', color: '#F59E0B', is_default: true },
+              { user_id: currentUser.id, name: 'Belanja Kebutuhan', type: 'expense', icon: 'ShoppingBag', color: '#EC4899', is_default: false },
+              { user_id: currentUser.id, name: 'Transportasi', type: 'expense', icon: 'Car', color: '#06B6D4', is_default: false },
+              { user_id: currentUser.id, name: 'Tagihan & Utilities', type: 'expense', icon: 'Receipt', color: '#8B5CF6', is_default: false },
+              { user_id: currentUser.id, name: 'Hiburan & Gaya Hidup', type: 'expense', icon: 'Gamepad2', color: '#F43F5E', is_default: false },
+            ];
 
-          const { data: insertedCategories } = await (supabase.from('categories') as any)
-            .insert(defaultCategories)
-            .select();
+            const { data: insertedCategories } = await (supabase.from('categories') as any)
+              .insert(defaultCategories)
+              .select();
 
-          if (insertedCategories) categoriesData = insertedCategories as Category[];
+            if (insertedCategories) categoriesData = insertedCategories as Category[];
+          } finally {
+            isSeedingRef.current = false;
+          }
         }
 
         // Deduplicate duplicate pockets by name if any exist from earlier auto-seeds
@@ -173,27 +179,49 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Deduplicate duplicate categories by name + type to prevent multiple duplicated cards
+        const uniqueCategories: Category[] = [];
+        const seenCatKeys = new Set<string>();
+        for (const c of categoriesData) {
+          const key = `${(c.name || '').trim().toLowerCase()}_${c.type}`;
+          if (!seenCatKeys.has(key)) {
+            seenCatKeys.add(key);
+            uniqueCategories.push(c);
+          }
+        }
+
         setRawPockets(uniquePockets);
-        setRawCategories(categoriesData);
+        setRawCategories(uniqueCategories);
         setRawTransactions((txRes.data as Transaction[]) || []);
         setRawTransfers((trRes.data as Transfer[]) || []);
       } else {
         // Standalone Local Mode
         setUser({
           id: 'local-user',
-          email: 'user@aloka.app',
-          name: 'Wahyu',
+          email: 'user@smartfinance.app',
+          name: 'Pengguna',
         });
         setIsLiveSupabase(false);
 
         // Load from LocalStorage
-        const localPockets = localStorage.getItem('aloka_pockets');
-        const localCategories = localStorage.getItem('aloka_categories');
-        const localTransactions = localStorage.getItem('aloka_transactions');
-        const localTransfers = localStorage.getItem('aloka_transfers');
+        const localPockets = localStorage.getItem('smart_finance_pockets') || localStorage.getItem('aloka_pockets');
+        const localCategories = localStorage.getItem('smart_finance_categories') || localStorage.getItem('aloka_categories');
+        const localTransactions = localStorage.getItem('smart_finance_transactions') || localStorage.getItem('aloka_transactions');
+        const localTransfers = localStorage.getItem('smart_finance_transfers') || localStorage.getItem('aloka_transfers');
+
+        const parsedCats: Category[] = localCategories ? JSON.parse(localCategories) : [];
+        const uniqueCats: Category[] = [];
+        const seenLocalKeys = new Set<string>();
+        for (const c of parsedCats) {
+          const key = `${(c.name || '').trim().toLowerCase()}_${c.type}`;
+          if (!seenLocalKeys.has(key)) {
+            seenLocalKeys.add(key);
+            uniqueCats.push(c);
+          }
+        }
 
         setRawPockets(localPockets ? JSON.parse(localPockets) : []);
-        setRawCategories(localCategories ? JSON.parse(localCategories) : []);
+        setRawCategories(uniqueCats);
         setRawTransactions(localTransactions ? JSON.parse(localTransactions) : []);
         setRawTransfers(localTransfers ? JSON.parse(localTransfers) : []);
       }
@@ -222,12 +250,26 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     newTr?: Transfer[]
   ) => {
     if (!isLiveSupabase && typeof window !== 'undefined') {
-      if (newPockets !== undefined) localStorage.setItem('aloka_pockets', JSON.stringify(newPockets));
-      if (newCategories !== undefined) localStorage.setItem('aloka_categories', JSON.stringify(newCategories));
-      if (newTx !== undefined) localStorage.setItem('aloka_transactions', JSON.stringify(newTx));
-      if (newTr !== undefined) localStorage.setItem('aloka_transfers', JSON.stringify(newTr));
+      if (newPockets !== undefined) localStorage.setItem('smart_finance_pockets', JSON.stringify(newPockets));
+      if (newCategories !== undefined) localStorage.setItem('smart_finance_categories', JSON.stringify(newCategories));
+      if (newTx !== undefined) localStorage.setItem('smart_finance_transactions', JSON.stringify(newTx));
+      if (newTr !== undefined) localStorage.setItem('smart_finance_transfers', JSON.stringify(newTr));
     }
   };
+
+  // Deduplicated Categories to guarantee no duplicate cards
+  const categories = useMemo<Category[]>(() => {
+    const unique: Category[] = [];
+    const seen = new Set<string>();
+    for (const c of rawCategories) {
+      const key = `${(c.name || '').trim().toLowerCase()}_${c.type}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(c);
+      }
+    }
+    return unique;
+  }, [rawCategories]);
 
   // Calculate Pocket Balances accurately
   const pockets = useMemo<PocketWithBalance[]>(() => {
@@ -968,7 +1010,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     <FinanceContext.Provider
       value={{
         pockets,
-        categories: rawCategories,
+        categories,
         transactions: rawTransactions,
         transfers: rawTransfers,
         unifiedActivities,

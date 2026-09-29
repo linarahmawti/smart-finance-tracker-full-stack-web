@@ -193,7 +193,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <div className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{name}</div>
-                <div className="text-xs text-zinc-400">{user?.email || 'user@aloka.app'}</div>
+                <div className="text-xs text-zinc-400">{user?.email || 'user@smartfinance.app'}</div>
               </div>
             </div>
 
@@ -206,7 +206,7 @@ export default function SettingsPage() {
               />
               <Input
                 label="Alamat Email"
-                value={user?.email || 'user@aloka.app'}
+                value={user?.email || 'user@smartfinance.app'}
                 disabled
                 helperText="Email terdaftar."
               />

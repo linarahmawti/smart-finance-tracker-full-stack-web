@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Aloka",
+    title: "Smart Finance",
   },
   formatDetection: {
     telephone: false,
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "id_ID",
-    url: "https://aloka-finance.vercel.app",
+    url: "https://smartfinance.app",
     title: "Smart Finance — Personal Finance & Pocket Tracker",
     description:
       "Kelola pemasukan, pengeluaran, tabungan, dan kantong dana dengan mudah.",
@@ -101,7 +101,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Aloka" />
+        <meta name="apple-mobile-web-app-title" content="Smart Finance" />
         <link rel="icon" href="/icons/icon-192.png" type="image/png" />
         <link rel="shortcut icon" href="/icons/icon-192.png" type="image/png" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

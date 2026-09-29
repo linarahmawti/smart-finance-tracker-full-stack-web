@@ -53,6 +53,9 @@ export default function RegisterPage() {
         }
         toast.error(error.message || 'Gagal mendaftar');
       } else {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('smart_finance_just_registered', 'true');
+        }
         if (data?.session) {
           toast.success('Pendaftaran berhasil! Selamat datang di Smart Finance.');
           router.push('/dashboard');
@@ -62,6 +65,9 @@ export default function RegisterPage() {
         }
       }
     } catch {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('smart_finance_just_registered', 'true');
+      }
       toast.info('Beralih ke Dashboard Demo.');
       router.push('/dashboard');
     } finally {
