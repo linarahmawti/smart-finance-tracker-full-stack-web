@@ -73,7 +73,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Check auth status
       const { data: authData } = await supabase.auth.getUser();
       const currentUser = authData?.user;
 
@@ -85,91 +84,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         });
         setIsLiveSupabase(true);
 
-        // Fetch from Supabase filtered specifically by current user's ID
-        const [pocketsRes, catRes, txRes, trRes] = await Promise.all([
-          supabase
-            .from('pockets')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: true }),
-          supabase
-            .from('categories')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('name', { ascending: true }),
-          supabase
-            .from('transactions')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('transaction_date', { ascending: false }),
-          supabase
-            .from('transfers')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('transfer_date', { ascending: false }),
-        ]);
+        const response = await fetch('/api/finance', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
 
-        let pocketsData = (pocketsRes.data as Pocket[]) || [];
-        let categoriesData = (catRes.data as Category[]) || [];
-
-        // Auto-seed default pockets if account has no pockets
-        if (pocketsData.length === 0) {
-          const defaultPockets = [
-            {
-              user_id: currentUser.id,
-              name: 'Dana Utama',
-              description: 'Kantong utama alokasi dana',
-              icon: 'Wallet',
-              color: '#3B82F6',
-              target_amount: 0,
-              initial_balance: 0,
-              is_default: true,
-            },
-            {
-              user_id: currentUser.id,
-              name: 'Dana Harian',
-              description: 'Budget konsumsi & pengeluaran harian',
-              icon: 'Utensils',
-              color: '#10B981',
-              target_amount: 0,
-              initial_balance: 0,
-              is_default: false,
-            },
-          ];
-
-          const { data: insertedPockets } = await (supabase.from('pockets') as any)
-            .insert(defaultPockets)
-            .select();
-
-          if (insertedPockets) pocketsData = insertedPockets as Pocket[];
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => null);
+          throw new Error(errorBody?.error || 'Gagal memuat data keuangan');
         }
 
-        // Auto-seed default categories if account has no categories
-        if (categoriesData.length === 0 && !isSeedingRef.current) {
-          isSeedingRef.current = true;
-          try {
-            const defaultCategories = [
-              { user_id: currentUser.id, name: 'Gaji Pokok', type: 'income', icon: 'Briefcase', color: '#10B981', is_default: true },
-              { user_id: currentUser.id, name: 'Bonus & Freelance', type: 'income', icon: 'Sparkles', color: '#3B82F6', is_default: false },
-              { user_id: currentUser.id, name: 'Lainnya', type: 'income', icon: 'Coins', color: '#64748B', is_default: false },
-              { user_id: currentUser.id, name: 'Makanan & Minuman', type: 'expense', icon: 'Utensils', color: '#F59E0B', is_default: true },
-              { user_id: currentUser.id, name: 'Belanja Kebutuhan', type: 'expense', icon: 'ShoppingBag', color: '#EC4899', is_default: false },
-              { user_id: currentUser.id, name: 'Transportasi', type: 'expense', icon: 'Car', color: '#06B6D4', is_default: false },
-              { user_id: currentUser.id, name: 'Tagihan & Utilities', type: 'expense', icon: 'Receipt', color: '#8B5CF6', is_default: false },
-              { user_id: currentUser.id, name: 'Hiburan & Gaya Hidup', type: 'expense', icon: 'Gamepad2', color: '#F43F5E', is_default: false },
-            ];
+        const data = await response.json();
+        const pocketsData = (data.pockets as Pocket[]) || [];
+        const categoriesData = (data.categories as Category[]) || [];
+        const transactionsData = (data.transactions as Transaction[]) || [];
+        const transfersData = (data.transfers as Transfer[]) || [];
 
-            const { data: insertedCategories } = await (supabase.from('categories') as any)
-              .insert(defaultCategories)
-              .select();
-
-            if (insertedCategories) categoriesData = insertedCategories as Category[];
-          } finally {
-            isSeedingRef.current = false;
-          }
-        }
-
-        // Deduplicate duplicate pockets by name if any exist from earlier auto-seeds
         const uniquePockets: Pocket[] = [];
         const seenNames = new Set<string>();
         for (const p of pocketsData) {
@@ -179,7 +109,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Deduplicate duplicate categories by name + type to prevent multiple duplicated cards
         const uniqueCategories: Category[] = [];
         const seenCatKeys = new Set<string>();
         for (const c of categoriesData) {
@@ -192,10 +121,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
         setRawPockets(uniquePockets);
         setRawCategories(uniqueCategories);
-        setRawTransactions((txRes.data as Transaction[]) || []);
-        setRawTransfers((trRes.data as Transfer[]) || []);
+        setRawTransactions(transactionsData);
+        setRawTransfers(transfersData);
       } else {
-        // Standalone Local Mode
         setUser({
           id: 'local-user',
           email: 'user@smartfinance.app',
@@ -203,7 +131,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         });
         setIsLiveSupabase(false);
 
-        // Load from LocalStorage
         const localPockets = localStorage.getItem('smart_finance_pockets') || localStorage.getItem('aloka_pockets');
         const localCategories = localStorage.getItem('smart_finance_categories') || localStorage.getItem('aloka_categories');
         const localTransactions = localStorage.getItem('smart_finance_transactions') || localStorage.getItem('aloka_transactions');
@@ -227,6 +154,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error('Error loading finance data:', err);
+      toast.error(err instanceof Error ? err.message : 'Gagal memuat data keuangan');
     } finally {
       setIsLoading(false);
     }
@@ -467,23 +395,26 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (isLiveSupabase) {
-        const { data: inserted, error } = await (supabase
-          .from('transactions') as any)
-          .insert({
-            user_id: newTx.user_id,
-            pocket_id: newTx.pocket_id,
-            category_id: newTx.category_id,
-            type: 'income',
-            amount: newTx.amount,
-            title: newTx.title,
-            description: newTx.description,
-            transaction_date: newTx.transaction_date,
-          })
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create-income',
+            payload: {
+              pocket_id: data.pocket_id,
+              category_id: data.category_id,
+              amount: Number(data.amount),
+              title: data.title,
+              description: data.description || null,
+              transaction_date: data.transaction_date,
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawTransactions((prev) => [inserted as Transaction, ...prev]);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal mencatat pemasukan');
+
+        setRawTransactions((prev) => [result.transaction as Transaction, ...prev]);
       } else {
         const updated = [newTx, ...rawTransactions];
         setRawTransactions(updated);
@@ -531,23 +462,26 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (isLiveSupabase) {
-        const { data: inserted, error } = await (supabase
-          .from('transactions') as any)
-          .insert({
-            user_id: newTx.user_id,
-            pocket_id: newTx.pocket_id,
-            category_id: newTx.category_id,
-            type: 'expense',
-            amount: newTx.amount,
-            title: newTx.title,
-            description: newTx.description,
-            transaction_date: newTx.transaction_date,
-          })
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create-expense',
+            payload: {
+              pocket_id: data.pocket_id,
+              category_id: data.category_id,
+              amount: Number(data.amount),
+              title: data.title,
+              description: data.description || null,
+              transaction_date: data.transaction_date,
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawTransactions((prev) => [inserted as Transaction, ...prev]);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal mencatat pengeluaran');
+
+        setRawTransactions((prev) => [result.transaction as Transaction, ...prev]);
       } else {
         const updated = [newTx, ...rawTransactions];
         setRawTransactions(updated);
@@ -598,22 +532,26 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (isLiveSupabase) {
-        const { data: inserted, error } = await (supabase
-          .from('transfers') as any)
-          .insert({
-            user_id: newTransfer.user_id,
-            from_pocket_id: newTransfer.from_pocket_id,
-            to_pocket_id: newTransfer.to_pocket_id,
-            amount: newTransfer.amount,
-            title: newTransfer.title,
-            description: newTransfer.description,
-            transfer_date: newTransfer.transfer_date,
-          })
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create-transfer',
+            payload: {
+              from_pocket_id: data.from_pocket_id,
+              to_pocket_id: data.to_pocket_id,
+              amount: Number(data.amount),
+              title: data.title,
+              description: data.description || null,
+              transfer_date: data.transfer_date,
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawTransfers((prev) => [inserted as Transfer, ...prev]);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal melakukan transfer');
+
+        setRawTransfers((prev) => [result.transfer as Transfer, ...prev]);
       } else {
         const updated = [newTransfer, ...rawTransfers];
         setRawTransfers(updated);
@@ -635,25 +573,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   ): Promise<boolean> => {
     try {
       if (isLiveSupabase && user) {
-        const { data: updated, error } = await (supabase
-          .from('transactions') as any)
-          .update({
-            pocket_id: data.pocket_id,
-            category_id: data.category_id,
-            amount: Number(data.amount),
-            title: data.title,
-            description: data.description || null,
-            transaction_date: data.transaction_date,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update-transaction',
+            id,
+            payload: {
+              pocket_id: data.pocket_id,
+              category_id: data.category_id,
+              amount: Number(data.amount),
+              title: data.title,
+              description: data.description || null,
+              transaction_date: data.transaction_date,
+            },
+          }),
+        });
 
-        if (error) throw error;
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal memperbarui transaksi');
+
         setRawTransactions((prev) =>
-          prev.map((tx) => (tx.id === id ? (updated as Transaction) : tx))
+          prev.map((tx) => (tx.id === id ? (result.transaction as Transaction) : tx))
         );
       } else {
         const updated = rawTransactions.map((tx) =>
@@ -686,12 +627,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteTransaction = async (id: string): Promise<boolean> => {
     try {
       if (isLiveSupabase && user) {
-        const { error } = await supabase
-          .from('transactions')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
-        if (error) throw error;
+        const response = await fetch('/api/finance', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete-transaction', id }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal menghapus transaksi');
         setRawTransactions((prev) => prev.filter((tx) => tx.id !== id));
       } else {
         const updated = rawTransactions.filter((tx) => tx.id !== id);
@@ -711,12 +654,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteTransfer = async (id: string): Promise<boolean> => {
     try {
       if (isLiveSupabase && user) {
-        const { error } = await supabase
-          .from('transfers')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
-        if (error) throw error;
+        const response = await fetch('/api/finance', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete-transfer', id }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal menghapus transfer');
         setRawTransfers((prev) => prev.filter((tr) => tr.id !== id));
       } else {
         const updated = rawTransfers.filter((tr) => tr.id !== id);
@@ -750,23 +695,26 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (isLiveSupabase && user) {
-        const { data: inserted, error } = await (supabase
-          .from('pockets') as any)
-          .insert({
-            user_id: user.id,
-            name: newPocket.name,
-            description: newPocket.description,
-            icon: newPocket.icon,
-            color: newPocket.color,
-            target_amount: newPocket.target_amount,
-            initial_balance: newPocket.initial_balance,
-            is_default: false,
-          })
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create-pocket',
+            payload: {
+              name: data.name,
+              description: data.description || null,
+              icon: data.icon,
+              color: data.color,
+              target_amount: Number(data.target_amount || 0),
+              initial_balance: Number(data.initial_balance || 0),
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawPockets((prev) => [...prev, inserted as Pocket]);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal membuat kantong dana');
+
+        setRawPockets((prev) => [...prev, result.pocket as Pocket]);
       } else {
         const updated = [...rawPockets, newPocket];
         setRawPockets(updated);
@@ -785,24 +733,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const updatePocket = async (id: string, data: PocketFormData): Promise<boolean> => {
     try {
       if (isLiveSupabase && user) {
-        const { data: updated, error } = await (supabase
-          .from('pockets') as any)
-          .update({
-            name: data.name,
-            description: data.description || null,
-            icon: data.icon,
-            color: data.color,
-            target_amount: Number(data.target_amount || 0),
-            initial_balance: Number(data.initial_balance || 0),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update-pocket',
+            id,
+            payload: {
+              name: data.name,
+              description: data.description || null,
+              icon: data.icon,
+              color: data.color,
+              target_amount: Number(data.target_amount || 0),
+              initial_balance: Number(data.initial_balance || 0),
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawPockets((prev) => prev.map((p) => (p.id === id ? (updated as Pocket) : p)));
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal memperbarui kantong');
+
+        setRawPockets((prev) => prev.map((p) => (p.id === id ? (result.pocket as Pocket) : p)));
       } else {
         const updated = rawPockets.map((p) =>
           p.id === id
@@ -851,21 +802,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       const isDeletingDefault = Boolean(pocket?.is_default);
 
       if (isLiveSupabase && user) {
-        const { error } = await supabase
-          .from('pockets')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
-        if (error) throw error;
+        const response = await fetch('/api/finance', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete-pocket', id }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal menghapus kantong');
 
         let nextPockets = rawPockets.filter((p) => p.id !== id);
 
         if (isDeletingDefault && nextPockets.length > 0) {
           const nextDefault = { ...nextPockets[0], is_default: true };
           nextPockets = [nextDefault, ...nextPockets.slice(1)];
-          await (supabase.from('pockets') as any)
-            .update({ is_default: true })
-            .eq('id', nextDefault.id);
         }
 
         setRawPockets(nextPockets);
@@ -902,21 +852,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (isLiveSupabase && user) {
-        const { data: inserted, error } = await (supabase
-          .from('categories') as any)
-          .insert({
-            user_id: user.id,
-            name: newCat.name,
-            type: newCat.type,
-            icon: newCat.icon,
-            color: newCat.color,
-            is_default: false,
-          })
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create-category',
+            payload: {
+              name: data.name,
+              type: data.type,
+              icon: data.icon,
+              color: data.color,
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawCategories((prev) => [...prev, inserted as Category]);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal membuat kategori');
+
+        setRawCategories((prev) => [...prev, result.category as Category]);
       } else {
         const updated = [...rawCategories, newCat];
         setRawCategories(updated);
@@ -935,21 +888,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const updateCategory = async (id: string, data: CategoryFormData): Promise<boolean> => {
     try {
       if (isLiveSupabase && user) {
-        const { data: updated, error } = await (supabase
-          .from('categories') as any)
-          .update({
-            name: data.name,
-            icon: data.icon,
-            color: data.color,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .select()
-          .single();
+        const response = await fetch('/api/finance', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update-category',
+            id,
+            payload: {
+              name: data.name,
+              icon: data.icon,
+              color: data.color,
+            },
+          }),
+        });
 
-        if (error) throw error;
-        setRawCategories((prev) => prev.map((c) => (c.id === id ? (updated as Category) : c)));
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal memperbarui kategori');
+
+        setRawCategories((prev) => prev.map((c) => (c.id === id ? (result.category as Category) : c)));
       } else {
         const updated = rawCategories.map((c) =>
           c.id === id
@@ -984,12 +940,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isLiveSupabase && user) {
-        const { error } = await supabase
-          .from('categories')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
-        if (error) throw error;
+        const response = await fetch('/api/finance', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete-category', id }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Gagal menghapus kategori');
         setRawCategories((prev) => prev.filter((c) => c.id !== id));
       } else {
         const updated = rawCategories.filter((c) => c.id !== id);
