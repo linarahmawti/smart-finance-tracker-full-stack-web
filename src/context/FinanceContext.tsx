@@ -55,6 +55,10 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
+function normalizePocketName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<{ id: string; email?: string; name?: string } | null>(null);
@@ -100,15 +104,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         const transactionsData = (data.transactions as Transaction[]) || [];
         const transfersData = (data.transfers as Transfer[]) || [];
 
-        const uniquePockets: Pocket[] = [];
-        const seenNames = new Set<string>();
-        for (const p of pocketsData) {
-          if (!seenNames.has(p.name)) {
-            seenNames.add(p.name);
-            uniquePockets.push(p);
-          }
-        }
-
         const uniqueCategories: Category[] = [];
         const seenCatKeys = new Set<string>();
         for (const c of categoriesData) {
@@ -119,7 +114,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        setRawPockets(uniquePockets);
+        setRawPockets(pocketsData);
         setRawCategories(uniqueCategories);
         setRawTransactions(transactionsData);
         setRawTransfers(transfersData);
@@ -680,6 +675,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const createPocket = async (data: PocketFormData): Promise<boolean> => {
     try {
+      const normalizedName = normalizePocketName(data.name);
+      if (rawPockets.some((pocket) => normalizePocketName(pocket.name) === normalizedName)) {
+        toast.error('Nama kantong sudah digunakan. Gunakan nama lain.');
+        return false;
+      }
+
       const newPocket: Pocket = {
         id: isLiveSupabase ? '' : `pocket-${Date.now()}`,
         user_id: user?.id || 'local-user',
@@ -732,6 +733,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const updatePocket = async (id: string, data: PocketFormData): Promise<boolean> => {
     try {
+      const currentPocket = rawPockets.find((pocket) => pocket.id === id);
+      const normalizedName = normalizePocketName(data.name);
+      const isRenaming =
+        currentPocket && normalizePocketName(currentPocket.name) !== normalizedName;
+      if (
+        isRenaming &&
+        rawPockets.some(
+          (pocket) =>
+            pocket.id !== id && normalizePocketName(pocket.name) === normalizedName
+        )
+      ) {
+        toast.error('Nama kantong sudah digunakan. Gunakan nama lain.');
+        return false;
+      }
+
       if (isLiveSupabase && user) {
         const response = await fetch('/api/finance', {
           method: 'PUT',

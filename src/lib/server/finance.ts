@@ -104,16 +104,6 @@ export async function fetchFinanceDataForUser(userId: string) {
     categoriesData = (insertedCategories ?? []) as CategoryRow[];
   }
 
-  const uniquePockets: PocketRow[] = [];
-  const seenPockets = new Set<string>();
-  for (const pocket of pocketsData) {
-    const key = String(pocket.name || '').trim().toLowerCase();
-    if (!seenPockets.has(key)) {
-      seenPockets.add(key);
-      uniquePockets.push(pocket);
-    }
-  }
-
   const uniqueCategories: CategoryRow[] = [];
   const seenCategories = new Set<string>();
   for (const item of categoriesData) {
@@ -125,7 +115,7 @@ export async function fetchFinanceDataForUser(userId: string) {
   }
 
   return {
-    pockets: uniquePockets,
+    pockets: pocketsData,
     categories: uniqueCategories,
     transactions: (txRes.data ?? []) as TransactionRow[],
     transfers: (trRes.data ?? []) as TransferRow[],
@@ -138,6 +128,7 @@ export async function createPocketServer(userId: string, payload: FinancePayload
   }
 
   const supabase = (await createClient()) as any;
+  await assertPocketNameAvailable(supabase, userId, String(payload.name));
   const { data, error } = await supabase
     .from('pockets')
     .insert({
@@ -158,7 +149,12 @@ export async function createPocketServer(userId: string, payload: FinancePayload
 }
 
 export async function updatePocketServer(userId: string, id: string, payload: FinancePayload) {
+  if (!payload.name || String(payload.name).trim().length === 0) {
+    throw new Error('Nama kantong wajib diisi');
+  }
+
   const supabase = (await createClient()) as any;
+  await assertPocketNameAvailable(supabase, userId, String(payload.name), id);
   const { data, error } = await supabase
     .from('pockets')
     .update({
@@ -179,28 +175,70 @@ export async function updatePocketServer(userId: string, id: string, payload: Fi
   return { pocket: data as PocketRow };
 }
 
+async function assertPocketNameAvailable(
+  supabase: any,
+  userId: string,
+  name: string,
+  excludeId?: string
+) {
+  const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+  const { data, error } = await supabase
+    .from('pockets')
+    .select('id, name')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+
+  const normalizedName = normalize(name);
+  const currentPocket = (data ?? []).find((pocket: { id: string; name: string }) => pocket.id === excludeId);
+  if (excludeId && currentPocket && normalize(currentPocket.name) === normalizedName) return;
+
+  const duplicate = (data ?? []).some(
+    (pocket: { id: string; name: string }) =>
+      pocket.id !== excludeId && normalize(pocket.name) === normalizedName
+  );
+
+  if (duplicate) throw new Error('Nama kantong sudah digunakan. Gunakan nama lain.');
+}
+
 export async function deletePocketServer(userId: string, id: string) {
   const supabase = (await createClient()) as any;
-  const { data: pocketData } = await supabase
+  const { data: pocketData, error: pocketError } = await supabase
     .from('pockets')
     .select('id, is_default')
     .eq('user_id', userId)
     .eq('id', id)
     .maybeSingle();
+  if (pocketError) throw pocketError;
+  if (!pocketData) throw new Error('Kantong tidak ditemukan.');
 
-  const { data: txData } = await supabase.from('transactions').select('id').eq('user_id', userId).eq('pocket_id', id);
-  const { data: trData } = await supabase
+  const { data: txData, error: txError } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('pocket_id', id);
+  if (txError) throw txError;
+
+  const { data: trData, error: trError } = await supabase
     .from('transfers')
     .select('id')
     .or(`from_pocket_id.eq.${id},to_pocket_id.eq.${id}`)
     .eq('user_id', userId);
+  if (trError) throw trError;
 
   if ((txData ?? []).length > 0 || (trData ?? []).length > 0) {
     throw new Error('Kantong tidak dapat dihapus karena masih memiliki riwayat transaksi/transfer.');
   }
 
-  const { error } = await supabase.from('pockets').delete().eq('id', id).eq('user_id', userId);
+  const { data: deletedPocket, error } = await supabase
+    .from('pockets')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
   if (error) throw error;
+  if (!deletedPocket) throw new Error('Kantong tidak ditemukan atau tidak dapat dihapus.');
 
   if (pocketData?.is_default) {
     const { data: nextPocket } = await supabase

@@ -16,7 +16,7 @@ import {
   Target,
   Edit2,
   Trash2,
-  Lock,
+  ChevronDown,
 } from 'lucide-react';
 
 export default function PocketsPage() {
@@ -26,12 +26,24 @@ export default function PocketsPage() {
   const [pocketToDelete, setPocketToDelete] = React.useState<Pocket | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
+  const pocketGroups = React.useMemo(() => {
+    const groups = new Map<string, typeof pockets>();
+    pockets.forEach((pocket) => {
+      const key = pocket.name.trim().replace(/\s+/g, ' ').toLowerCase();
+      groups.set(key, [...(groups.get(key) ?? []), pocket]);
+    });
+    return Array.from(groups, ([key, groupedPockets]) => ({ key, pockets: groupedPockets }));
+  }, [pockets]);
+
   const handleDeleteConfirm = async () => {
     if (!pocketToDelete) return;
     setIsDeleting(true);
-    await deletePocket(pocketToDelete.id);
-    setIsDeleting(false);
-    setPocketToDelete(null);
+    try {
+      const deleted = await deletePocket(pocketToDelete.id);
+      if (deleted) setPocketToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -69,7 +81,7 @@ export default function PocketsPage() {
             {formatRupiah(summary.total_balance)}
           </div>
           <p className="mt-1 text-xs text-blue-100/80">
-            Terbagi dalam {pockets.length} pos kantong aktif
+            Terbagi dalam {pocketGroups.length} pos kantong aktif
           </p>
         </div>
 
@@ -102,9 +114,16 @@ export default function PocketsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full max-w-full">
-          {pockets.map((pocket) => (
+          {pocketGroups.map(({ key, pockets: group }) => {
+            const pocket = group[0];
+            const groupBalance = group.reduce((total, item) => total + item.current_balance, 0);
+            const groupActivityCount = group.reduce((total, item) => total + item.transaction_count, 0);
+            const groupTarget = group.reduce((total, item) => total + Number(item.target_amount || 0), 0);
+            const groupProgress = groupTarget > 0 ? Math.max(0, Math.min(100, (groupBalance / groupTarget) * 100)) : 0;
+
+            return (
             <div
-              key={pocket.id}
+              key={key}
               className="flex flex-col justify-between rounded-3xl border border-zinc-200/80 bg-white p-5 sm:p-6 shadow-sm transition-all hover:shadow-md active:scale-[0.99] dark:border-zinc-800/80 dark:bg-zinc-900 w-full max-w-full"
             >
               <div>
@@ -124,6 +143,11 @@ export default function PocketsPage() {
                       <p className="truncate text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                         {pocket.description || 'Kantong Finansial'}
                       </p>
+                      {group.length > 1 && (
+                        <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                          {group.length} record nama sama
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -168,31 +192,31 @@ export default function PocketsPage() {
                     </button>
                   </div>
                   <div className="text-xl sm:text-2xl font-black font-number text-zinc-900 dark:text-zinc-50 mt-0.5 truncate">
-                    {formatRupiah(pocket.current_balance)}
+                    {formatRupiah(groupBalance)}
                   </div>
                   <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 pt-2 border-t border-zinc-200/50 dark:border-zinc-700/40">
-                    <span>{pocket.transaction_count} aktivitas tercatat</span>
-                    {pocket.is_default && <span className="font-semibold text-blue-600 dark:text-blue-400">Default</span>}
+                    <span>{groupActivityCount} aktivitas tercatat</span>
+                    {group.some((item) => item.is_default) && <span className="font-semibold text-blue-600 dark:text-blue-400">Default</span>}
                   </div>
                 </div>
 
                 {/* Target Progress Bar */}
-                {pocket.target_amount > 0 ? (
+                {groupTarget > 0 ? (
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 truncate">
                         <Target className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                        <span className="truncate">Target: {formatRupiah(pocket.target_amount)}</span>
+                        <span className="truncate">Target: {formatRupiah(groupTarget)}</span>
                       </div>
                       <span className="font-bold text-blue-600 dark:text-blue-400 shrink-0 ml-2">
-                        {formatPercentage(pocket.progress_percentage)}
+                        {formatPercentage(groupProgress)}
                       </span>
                     </div>
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
-                          width: `${Math.min(100, pocket.progress_percentage)}%`,
+                          width: `${groupProgress}%`,
                           backgroundColor: pocket.color,
                         }}
                       />
@@ -213,6 +237,49 @@ export default function PocketsPage() {
                 )}
               </div>
 
+              {group.length > 1 && (
+                <details className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                    Lihat record satu per satu
+                    <ChevronDown className="h-4 w-4 shrink-0" />
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    {group.map((item) => (
+                      <div key={item.id} className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-800/60">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                              {item.description || `Kantong ${item.id.slice(0, 8)}`}
+                            </p>
+                            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              {formatRupiah(item.current_balance)} · {item.transaction_count} aktivitas
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => { setPocketToEdit(item); setIsPocketModalOpen(true); }}
+                              className="rounded-lg p-1.5 text-zinc-500 hover:bg-white hover:text-blue-600 dark:hover:bg-zinc-700"
+                              aria-label={`Edit record kantong ${item.name}`}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPocketToDelete(item)}
+                              className="rounded-lg p-1.5 text-zinc-500 hover:bg-white hover:text-red-600 dark:hover:bg-zinc-700"
+                              aria-label={`Hapus record kantong ${item.name}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
               {/* Detail Link */}
               <div className="mt-5 sm:mt-6 pt-3.5 sm:pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <Link
@@ -224,7 +291,8 @@ export default function PocketsPage() {
                 </Link>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
