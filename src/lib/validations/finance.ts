@@ -24,7 +24,7 @@ export const transferSchema = z
     title: z.string().min(1, 'Judul transfer wajib diisi').max(100, 'Judul maksimal 100 karakter'),
     from_pocket_id: z.string().min(1, 'Kantong asal wajib dipilih'),
     to_pocket_id: z.string().min(1, 'Kantong tujuan wajib dipilih'),
-    transfer_date: z.string().min(1, 'Tanggal transfer wajib diisi'),
+    transfer_date: z.string().min(1, 'Tanggal pindah dana wajib diisi'),
     description: z.string().optional().nullable(),
   })
   .refine((data) => data.from_pocket_id !== data.to_pocket_id, {

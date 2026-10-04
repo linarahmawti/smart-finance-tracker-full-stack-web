@@ -109,7 +109,7 @@ export function QuickActionModal({
               </div>
               <div>
                 <h4 className="font-bold text-zinc-900 dark:text-zinc-100">
-                  Menabung / Transfer Dana
+                  Menabung / Pindah Dana
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Pindahkan uang antar-kantong dana atau sisihkan tabungan.

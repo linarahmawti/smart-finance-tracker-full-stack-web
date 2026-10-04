@@ -150,7 +150,7 @@ export default function HistoryPage() {
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400'
           }`}
         >
-          Transfer / Menabung
+          Pindah Dana / Menabung
         </button>
       </div>
 
@@ -159,7 +159,7 @@ export default function HistoryPage() {
         <EmptyState
           icon="History"
           title="Belum Ada Riwayat Finansial"
-          description="Belum ada transaksi atau transfer dana yang tercatat pada filter ini."
+          description="Belum ada transaksi atau pindah dana yang tercatat pada filter ini."
           actionLabel="Mulai Catat Transaksi"
           onAction={() => setIsQuickActionOpen(true)}
         />

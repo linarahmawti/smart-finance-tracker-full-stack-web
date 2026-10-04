@@ -474,7 +474,7 @@ export async function createTransferServer(userId: string, payload: FinancePaylo
       from_pocket_id: payload.from_pocket_id,
       to_pocket_id: payload.to_pocket_id,
       amount,
-      title: payload.title || 'Transfer Dana',
+      title: payload.title || 'Pindah Dana',
       description: payload.description ?? null,
       transfer_date: payload.transfer_date,
     } as Database['public']['Tables']['transfers']['Insert'])

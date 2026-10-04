@@ -44,7 +44,7 @@ export function TransferModal({
     resolver: zodResolver(transferSchema),
     defaultValues: {
       amount: 0,
-      title: "Transfer Dana",
+      title: "Pindah Dana",
       from_pocket_id: defaultFrom,
       to_pocket_id: defaultTo,
       transfer_date: new Date().toISOString().split("T")[0],
@@ -67,7 +67,7 @@ export function TransferModal({
     if (isOpen) {
       reset({
         amount: 0,
-        title: "Transfer Dana",
+        title: "Pindah Dana",
         from_pocket_id: defaultFrom,
         to_pocket_id: defaultTo,
         transfer_date: new Date().toISOString().split("T")[0],
@@ -90,7 +90,7 @@ export function TransferModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Transfer Dana"
+      title="Pindah Dana"
       description="Pindahkan dana antar-kantong secara instan tanpa memengaruhi total kekayaan."
       maxWidth="md"
     >
@@ -101,7 +101,7 @@ export function TransferModal({
           control={control}
           render={({ field }) => (
             <RupiahInput
-              label="Nominal Transfer"
+              label="Nominal Pindah Dana"
               value={field.value}
               onChange={field.onChange}
               error={errors.amount?.message}
@@ -193,7 +193,7 @@ export function TransferModal({
         {/* Tanggal */}
         <Input
           type="date"
-          label="Tanggal Transfer"
+          label="Tanggal Pindah Dana"
           error={errors.transfer_date?.message}
           {...register("transfer_date")}
         />
@@ -205,7 +205,7 @@ export function TransferModal({
           <textarea
             className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-100"
             rows={2}
-            placeholder="Catatan transfer..."
+            placeholder="Catatan pindah dana..."
             {...register("description")}
           />
         </div>
@@ -230,7 +230,7 @@ export function TransferModal({
             leftIcon={<ArrowRightLeft className="h-4 w-4" />}
             className="font-semibold shadow-md shadow-violet-500/20"
           >
-            Lakukan Transfer
+            Lakukan Pindah Dana
           </Button>
         </div>
       </form>

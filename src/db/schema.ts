@@ -135,7 +135,7 @@ export const transfers = pgTable(
       .references(() => pockets.id, { onDelete: 'restrict' })
       .notNull(),
     amount: numeric('amount', { precision: 15, scale: 2 }).notNull(),
-    title: text('title').default('Transfer Dana').notNull(),
+    title: text('title').default('Pindah Dana').notNull(),
     description: text('description'),
     transfer_date: date('transfer_date').defaultNow().notNull(),
     created_at: timestamp('created_at', { withTimezone: true })
