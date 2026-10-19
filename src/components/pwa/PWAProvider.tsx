@@ -19,7 +19,35 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
 
   // Register Service Worker in production / client-side
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      const clearDevelopmentServiceWorker = async () => {
+        try {
+          const scriptUrl = `${window.location.origin}/sw.js`;
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          const appRegistrations = registrations.filter((registration) =>
+            [registration.active, registration.waiting, registration.installing].some(
+              (worker) => worker?.scriptURL === scriptUrl
+            )
+          );
+
+          await Promise.all(appRegistrations.map((registration) => registration.unregister()));
+
+          const appCaches = (await caches.keys()).filter((name) => name.startsWith('smart-finance-'));
+          await Promise.all(appCaches.map((name) => caches.delete(name)));
+        } catch (error) {
+          console.warn('[PWA] Failed to clear development service worker cache:', error);
+        }
+      };
+
+      void clearDevelopmentServiceWorker();
+      return;
+    }
+
+    {
       // Delay registration until window is loaded for optimal performance
       const registerSW = () => {
         navigator.serviceWorker

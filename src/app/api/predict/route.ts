@@ -54,22 +54,29 @@ function formatRupiahId(amount: number): string {
   return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(amount));
 }
 
-function calculateLocalPrediction(body: any) {
+function calculateLocalPrediction(body: Record<string, unknown>) {
   const isRupiahFull = Number(body.monthly_income || 0) >= 100_000;
   const currencyScale = isRupiahFull ? 1000.0 : 1.0;
+  const modelValueOrTrainingMean = (feature: keyof typeof SCALER, value: unknown) =>
+    value === undefined || value === null
+      ? SCALER[feature].mean
+      : Number(value) / currencyScale;
 
   const inc = Number(body.monthly_income || 0) / currencyScale;
-  const sr = Number(body.savings_rate || 0.2);
+  const sr = Number(body.savings_rate ?? 0.2);
   const bg = Number(body.budget_goal || 0) / currencyScale;
-  const dti = Number(body.debt_to_income_ratio || 0);
-  const lp = Number(body.loan_payment || 0) / currencyScale;
-  const inv = Number(body.investment_amount || 0) / currencyScale;
+  const dti =
+    body.debt_to_income_ratio === undefined || body.debt_to_income_ratio === null
+      ? SCALER.debt_to_income_ratio.mean
+      : Number(body.debt_to_income_ratio);
+  const lp = modelValueOrTrainingMean('loan_payment', body.loan_payment);
+  const inv = modelValueOrTrainingMean('investment_amount', body.investment_amount);
   const subs = Number(body.subscription_services || 0) / currencyScale;
   const ef = Number(body.emergency_fund || 0) / currencyScale;
-  const tc = Number(body.transaction_count || 30);
+  const tc = Number(body.transaction_count ?? SCALER.transaction_count.mean);
   const disc = Number(body.discretionary_spending || 0) / currencyScale;
   const es = Number(body.essential_spending || 0) / currencyScale;
-  const rent = Number(body.rent_or_mortgage || 0) / currencyScale;
+  const rent = modelValueOrTrainingMean('rent_or_mortgage', body.rent_or_mortgage);
 
   const now = new Date();
   const year = now.getFullYear();
@@ -83,7 +90,7 @@ function calculateLocalPrediction(body: any) {
   const savings_goal_met =
     body.savings_goal_met !== undefined
       ? Number(body.savings_goal_met)
-      : est_savings >= bg * 0.2
+      : est_savings >= inc * 0.2
       ? 1.0
       : 0.0;
 
@@ -126,14 +133,14 @@ function calculateLocalPrediction(body: any) {
     discretionary_spending: scaledValues.discretionary_spending,
     essential_spending: scaledValues.essential_spending,
     rent_or_mortgage: scaledValues.rent_or_mortgage,
-    financial_stress_level: Number(body.financial_stress_level || 0),
+    financial_stress_level: Number(body.financial_stress_level ?? 0),
     savings_goal_met: savings_goal_met,
-    income_type_Freelance: Number(body.income_type_Freelance || 0),
-    income_type_Mixed: Number(body.income_type_Mixed || 0),
-    income_type_Salary: Number(body.income_type_Salary || 1),
-    financial_scenario_inflation: Number(body.financial_scenario_inflation || 0),
-    financial_scenario_normal: Number(body.financial_scenario_normal || 1),
-    financial_scenario_recession: Number(body.financial_scenario_recession || 0),
+    income_type_Freelance: Number(body.income_type_Freelance ?? 0),
+    income_type_Mixed: Number(body.income_type_Mixed ?? 0),
+    income_type_Salary: Number(body.income_type_Salary ?? 1),
+    financial_scenario_inflation: Number(body.financial_scenario_inflation ?? 0),
+    financial_scenario_normal: Number(body.financial_scenario_normal ?? 1),
+    financial_scenario_recession: Number(body.financial_scenario_recession ?? 0),
     year: scaledValues.year,
     month: scaledValues.month,
     quarter: scaledValues.quarter,
@@ -198,7 +205,7 @@ function calculateLocalPrediction(body: any) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
 
     // 1. Try to call the external FastAPI backend if available
     const apiBaseUrl =
@@ -230,9 +237,9 @@ export async function POST(request: Request) {
     // 2. High-speed local mathematical fallback with exact model parameters
     const localResult = calculateLocalPrediction(body);
     return NextResponse.json(localResult);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { status: 'error', message: error.message || 'Internal Server Error' },
+      { status: 'error', message: error instanceof Error ? error.message : 'Internal Server Error' },
       { status: 500 }
     );
   }
