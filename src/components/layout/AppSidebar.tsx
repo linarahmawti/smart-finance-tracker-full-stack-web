@@ -15,7 +15,6 @@ import {
   History,
   Settings,
   Plus,
-  TrendingUp,
   Sparkles,
 } from 'lucide-react';
 import { SmartFinanceLogo } from '@/components/shared/SmartFinanceLogo';
@@ -30,7 +29,7 @@ export function AppSidebar() {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Transaksi', href: '/transactions', icon: ArrowLeftRight },
     { name: 'Kantong Dana', href: '/pockets', icon: Wallet, badge: pockets.length },
-    { name: 'Prediksi AI', href: '/predict', icon: Sparkles },
+    { name: 'Prediksi', href: '/predict', icon: Sparkles },
     { name: 'Kategori', href: '/categories', icon: Tags },
     { name: 'Riwayat Finansial', href: '/history', icon: History },
     { name: 'Pengaturan', href: '/settings', icon: Settings },

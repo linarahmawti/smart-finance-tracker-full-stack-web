@@ -16,26 +16,19 @@ import {
   Home,
   PieChart,
   ShieldCheck,
-  BrainCircuit,
+  Calculator,
   ChevronDown,
   Sliders,
   X,
   LoaderCircle,
 } from 'lucide-react';
 
-interface PredictionData {
+interface ExpenseEstimate {
   predicted_expense: number;
-  predicted_expense_formatted: string;
-  monthly_income: number;
-  sisa_saldo: number;
-  sisa_saldo_formatted: string;
-  expense_ratio_persen: number;
-  kategori_kesehatan: string;
-  saran: string;
-  meta: {
+  saran?: string;
+  kategori_kesehatan?: string;
+  meta?: {
     model: string;
-    mae: number;
-    r2: number;
     source?: string;
   };
 }
@@ -64,27 +57,21 @@ const periodLabels: Record<PeriodFilter, string> = {
 };
 
 const featureConnections = [
-  ['monthly_income', 'transactions.amount (income)', 'Dinormalisasi 30 hari; Semua waktu memakai 30 hari terakhir.'],
-  ['savings_rate', 'Input manual / transactions', 'Target tabungan ÷ pendapatan; Isi dari Data Saya memakai selisih pemasukan dan pengeluaran aktual.'],
-  ['budget_goal', 'Input manual / transactions.amount (expense)', 'Batas budget yang dimasukkan pengguna; Isi dari Data Saya memakai total pengeluaran aktual yang dinormalisasi 30 hari.'],
-  ['debt_to_income_ratio', 'Rerata data latih', 'Dinetralkan pada rerata data latih; tidak diminta dari form.'],
-  ['loan_payment', 'Rerata data latih', 'Dinetralkan pada rerata data latih; tidak diminta dari form.'],
-  ['investment_amount', 'Rerata data latih', 'Dinetralkan pada rerata data latih; tidak diminta dari form.'],
-  ['subscription_services', 'Input manual / transactions + categories', 'Isi dari Data Saya menjumlahkan transaksi pengeluaran yang kategorinya atau judulnya cocok dengan langganan.'],
-  ['emergency_fund', 'pockets (Dana Darurat / Emergency)', 'Saldo kantong darurat aktif.'],
-  ['transaction_count', 'transactions count (30 hari)', 'Jumlah transaksi bulanan dinormalisasi.'],
-  ['discretionary_spending', 'Input manual / transactions + categories', 'Isi dari Data Saya mengambil transaksi yang cocok dengan hiburan atau gaya hidup.'],
-  ['essential_spending', 'Input manual / transactions + categories', 'Isi dari Data Saya mengambil kebutuhan pokok dan transaksi yang kategorinya belum dikenali.'],
-  ['rent_or_mortgage', 'Rerata data latih', 'Dinetralkan pada rerata data latih; tidak diminta dari form.'],
-  ['financial_stress_level', 'Pilihan manual', 'Rendah = 0, Sedang = 1, Tinggi = 2.'],
-  ['income_type', 'Pilihan manual', 'Kiriman ortu menggunakan kategori pendapatan tetap pada model; Freelance dan Campuran tetap sesuai kategori latih.'],
-  ['financial_scenario', 'Netral', 'Pilihan Hemat/Sedang/Normal hanya memengaruhi estimasi cepat; model menggunakan nilai netral.'],
+  ['monthly_income', 'Pendapatan bulanan', 'Dipakai untuk menghitung sisa arus kas.'],
+  ['saving_pocket_target', 'Target kantong Menabung', 'Dipakai untuk memperkirakan waktu mencapai target dari sisa dana bulanan; tidak mengubah prediksi pengeluaran.'],
+  ['budget_goal', 'Batas budget bulanan', 'Hanya menjadi pembanding total pengeluaran, tidak mengubah estimasi pengeluaran.'],
+  ['subscription_services', 'Langganan', 'Ditambahkan ke total pengeluaran bulanan.'],
+  ['essential_spending', 'Kebutuhan pokok', 'Ditambahkan ke total pengeluaran bulanan.'],
+  ['discretionary_spending', 'Hiburan dan gaya hidup', 'Ditambahkan ke total pengeluaran bulanan.'],
+  ['emergency_fund', 'Saldo kantong dana darurat', 'Dibandingkan dengan estimasi pengeluaran untuk menghitung perkiraan cakupan bulan.'],
+  ['income_type', 'Sumber pendapatan', 'Dipakai untuk memberi konteks saran, terutama jika pemasukan freelance berubah-ubah.'],
+  ['financial_stress_level', 'Beban pikiran finansial', 'Dipakai untuk indikator kesehatan finansial, bukan untuk mengubah total pengeluaran.'],
+  ['economic_style', 'Kondisi ekonomi', 'Pilihan ini belum mengubah hitungan nominal; estimasi mengikuti angka yang dimasukkan.'],
 ] as const;
 
 interface FormState {
   income: number;
   goal: number;
-  save: number;
   needs: number;
   subs: number;
   emg: number;
@@ -97,7 +84,6 @@ interface FormState {
 const DEFAULT_FORM: FormState = {
   income: 0,
   goal: 0,
-  save: 0,
   needs: 0,
   subs: 0,
   emg: 0,
@@ -177,8 +163,6 @@ export default function PredictPage() {
       sourceLabel: period === 'all' ? '30 hari terakhir' : periodLabels[period],
     };
   }, [period, periodTransactions, transactions]);
-  const monthlyTransactionCount = monthlyEquivalent.transactionCount;
-
   const categorizedPeriodExpenses = React.useMemo(() => {
     const categoryNames = new Map(categories.map((category) => [category.id, category.name.toLowerCase()]));
     const totals = { needs: 0, subscriptions: 0, lifestyle: 0 };
@@ -189,7 +173,7 @@ export default function PredictPage() {
       const categoryName = categoryNames.get(transaction.category_id) ?? '';
       const searchableText = `${categoryName} ${transaction.title} ${transaction.description ?? ''}`.toLowerCase();
       const amount = Number(transaction.amount);
-      if (/langganan|subscription|wi.?fi|internet|streaming|netflix|gym|pulsa|paket data/.test(searchableText)) {
+      if (/tagihan|utilities|utilitas|langganan|subscription|wi.?fi|internet|streaming|netflix|gym|pulsa|paket data/.test(searchableText)) {
         totals.subscriptions += amount;
       } else if (/hiburan|entertainment|hobi|rekreasi|nongkrong|cafe|kafe|game|gaya hidup|lifestyle|liburan|tiket|bioskop/.test(searchableText)) {
         totals.lifestyle += amount;
@@ -226,6 +210,12 @@ export default function PredictPage() {
         .reduce((total, pocket) => total + Math.max(0, pocket.current_balance), 0),
     [pockets]
   );
+  const savingPocket = React.useMemo(
+    () => pockets.find((pocket) => pocket.name.trim().toLowerCase() === 'menabung')
+      ?? pockets.find((pocket) => /tabung|simpan/i.test(pocket.name) && Number(pocket.target_amount) > 0)
+      ?? null,
+    [pockets]
+  );
 
   // Form State
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
@@ -233,28 +223,35 @@ export default function PredictPage() {
   const [isHeroFlashing, setIsHeroFlashing] = React.useState<boolean>(false);
   const [showAiDetails, setShowAiDetails] = React.useState<boolean>(false);
 
-  // ML API execution state
+  // Expense estimate API state
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [aiResult, setAiResult] = React.useState<PredictionData | null>(null);
+  const [expenseEstimate, setExpenseEstimate] = React.useState<ExpenseEstimate | null>(null);
   const [predictionBaseline, setPredictionBaseline] = React.useState<PredictionBaseline | null>(null);
   const [analyzedForm, setAnalyzedForm] = React.useState<FormState | null>(null);
   const hasCurrentAnalysis =
-    aiResult !== null &&
+    expenseEstimate !== null &&
     analyzedForm !== null &&
     JSON.stringify(analyzedForm) === JSON.stringify(form);
 
   const calculationForm = hasCurrentAnalysis && analyzedForm ? analyzedForm : form;
-  const modelPrediction = hasCurrentAnalysis ? aiResult?.predicted_expense ?? null : null;
+  const predictionFromApi = hasCurrentAnalysis ? expenseEstimate?.predicted_expense ?? null : null;
 
-  // Results use the analyzed form snapshot and the model prediction, never a live estimate.
+  // Results use the analyzed form snapshot and the estimate returned by the API.
   const calculation = React.useMemo(() => {
     const fixed = calculationForm.needs + calculationForm.subs;
     const flex = calculationForm.fun;
-    const predictedExpense = modelPrediction ?? fixed + flex;
+    const predictedExpense = predictionFromApi ?? fixed + flex;
     const safeIncome = Math.max(calculationForm.income, 1);
-    const saveAmt = calculationForm.save;
-    const left = calculationForm.income - predictedExpense - saveAmt;
-    const allocationLeft = calculationForm.income - fixed - flex - saveAmt;
+    const left = calculationForm.income - predictedExpense;
+    // Keep most of the remaining cash flexible; suggest 20% for savings and 80% as buffer.
+    const saveAmt = left > 0 ? Math.floor((left * 0.2) / 1000) * 1000 : 0;
+    const allocationLeft = left - saveAmt;
+    const targetAmount = Number(savingPocket?.target_amount || 0);
+    const currentSavingBalance = Math.max(0, Number(savingPocket?.current_balance || 0));
+    const savingTargetRemaining = Math.max(0, targetAmount - currentSavingBalance);
+    const savingTargetMonths = saveAmt > 0 && savingTargetRemaining > 0
+      ? Math.ceil(savingTargetRemaining / saveAmt)
+      : null;
     const ratio = (predictedExpense / safeIncome) * 100;
 
     const parts = [
@@ -271,9 +268,11 @@ export default function PredictPage() {
         ? { level: 'neutral', text: 'Budget belum diisi' }
         : over > 0
         ? { level: 'bad', text: 'Melebihi budget', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20' }
+        : predictedExpense === calculationForm.goal
+          ? { level: 'warn', text: 'Pas dengan budget', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' }
         : predictedExpense > calculationForm.goal * 0.9
           ? { level: 'warn', text: 'Mendekati batas budget', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' }
-          : { level: 'ok', text: 'Aman dalam budget', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' };
+          : { level: 'ok', text: 'Dalam budget', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' };
 
     let score = 100;
     if (left < 0) score -= Math.min(35, (-left / safeIncome) * 100);
@@ -290,78 +289,61 @@ export default function PredictPage() {
     const addTip = (type: 'ok' | 'warn' | 'bad', text: string) => {
       if (tips.length < 3) tips.push({ type, text });
     };
-    const savingsRate = (saveAmt / safeIncome) * 100;
-
-    if (left < 0) {
-      addTip(
-        'bad',
-        `Prediksi pengeluaran dan target tabungan membuat arus kas defisit ${formatRupiah(-left)}. Kurangi pos pengeluaran atau sesuaikan target tabungan.`
-      );
-    }
-
-    if (calculationForm.goal <= 0) {
-      addTip('warn', 'Batas budget belum diisi, jadi prediksi belum dapat dibandingkan dengan anggaran bulanan.');
+    if (over > 0 && left < 0) {
+      addTip('bad', `Pengeluaranmu ${formatRupiah(predictedExpense)} lewat budget ${formatRupiah(calculationForm.goal)} sebesar ${formatRupiah(over)}, dan lebih besar ${formatRupiah(-left)} dari pemasukan. Cek transaksi, lalu tinjau gaya hidup atau langganan yang bisa ditunda. Jangan buru-buru memangkas kebutuhan pokok.`);
     } else if (over > 0) {
-      addTip(
-        'bad',
-        `Prediksi model ${formatRupiah(predictedExpense)} melebihi batas budget ${formatRupiah(calculationForm.goal)} sebesar ${formatRupiah(over)}.`
-      );
-    } else if (predictedExpense >= calculationForm.goal * 0.9) {
-      addTip(
-        'warn',
-        `Prediksi sudah memakai ${Math.round((predictedExpense / calculationForm.goal) * 100)}% dari budget. Sisakan ruang untuk kebutuhan tak terduga.`
-      );
+      addTip('bad', `Pengeluaranmu lewat budget sebesar ${formatRupiah(over)}, tapi total rencana masih sesuai pemasukan. Cek dulu transaksi, lalu lihat pos gaya hidup atau langganan yang bisa dikurangi. Kalau budget itu hanya perkiraan awal, kamu bisa menyesuaikannya dengan kondisi sebenarnya.`);
+    } else if (left < 0) {
+      addTip('bad', `Rencana pengeluaran lebih besar ${formatRupiah(-left)} dari pemasukan. Cek apakah ada transaksi yang terlewat; jika tidak, tinjau pos fleksibel atau langganan.`);
+    } else if (calculationForm.goal <= 0) {
+      addTip('warn', 'Isi batas budget supaya kamu bisa tahu apakah rencana pengeluaran masih sesuai anggaran.');
+    } else if (predictedExpense === calculationForm.goal) {
+      addTip('warn', `Pengeluaran pas dengan budget ${formatRupiah(calculationForm.goal)}. Rencanamu masih muat, tetapi belum ada ruang dari budget untuk kejutan.`);
     } else {
-      addTip(
-        'ok',
-        `Prediksi masih di bawah batas budget dengan sisa ruang ${formatRupiah(calculationForm.goal - predictedExpense)}.`
-      );
+      addTip('ok', `Pengeluaran masih dalam budget, dengan sisa ruang ${formatRupiah(calculationForm.goal - predictedExpense)}.`);
     }
 
     if (emgMonths < 3) {
       addTip(
         'warn',
-        `Dana darurat baru cukup sekitar ${emgMonths.toFixed(1)} bulan menurut prediksi. Sasaran umum adalah 3–6 bulan pengeluaran.`
-      );
-    }
-
-    if (left >= 0 && savingsRate < 10) {
-      addTip(
-        'warn',
-        `Target tabungan baru ${savingsRate.toFixed(0)}% dari pendapatan. Jika arus kas memungkinkan, naikkan bertahap agar ada cadangan lebih kuat.`
+        `Dana daruratmu kira-kira cukup ${emgMonths.toFixed(1)} bulan berdasarkan rencana ini. Kalau memungkinkan, bangun bertahap menuju cadangan 3–6 bulan pengeluaran.`
       );
     }
 
     if (
-      modelPrediction !== null &&
+      predictionFromApi !== null &&
       monthlyEquivalent.expense > 0 &&
       tips.length < 3
     ) {
       const difference = predictedExpense - monthlyEquivalent.expense;
       addTip(
         'warn',
-        `Dibanding realisasi ${periodLabels[period]}, prediksi model ${difference >= 0 ? 'lebih tinggi' : 'lebih rendah'} ${formatRupiah(Math.abs(difference))}. Jadikan ini pembanding, bukan kepastian.`
+        `Dibanding perkiraan laju pengeluaran (${periodLabels[period]}, disetarakan ke 30 hari), rencana ini ${difference >= 0 ? 'lebih tinggi' : 'lebih rendah'} ${formatRupiah(Math.abs(difference))}. Pastikan semua transaksi sudah masuk.`
       );
     }
 
     if (tips.length < 2 && calculationForm.type === 'Freelance') {
       addTip(
         'warn',
-        'Pemasukan freelance dapat berubah-ubah; sisakan buffer arus kas dan hitung ulang saat pemasukan berubah.'
+        'Karena pemasukan freelance bisa berubah-ubah, sisihkan sebagian sisa bulan ini sebagai buffer untuk bulan yang lebih sepi.'
       );
     }
 
-    if (tips.length < 2 && left >= 0 && calculationForm.goal > 0) {
+    if (tips.length < 2 && left > 0 && calculationForm.goal > 0) {
       addTip(
         'ok',
-        `Setelah prediksi dan target tabungan ${formatRupiah(saveAmt)}, estimasi sisa arus kas ${formatRupiah(left)}.`
+        `Setelah pengeluaran, masih ada sisa ${formatRupiah(left)}. Sisihkan sekitar ${formatRupiah(saveAmt)} untuk tabungan dan pertahankan ${formatRupiah(allocationLeft)} sebagai buffer.`
       );
+    }
+
+    if (tips.length < 2 && left === 0 && calculationForm.goal > 0) {
+      addTip('warn', 'Pemasukan dan pengeluaran pas. Belum ada sisa yang bisa dialokasikan ke tabungan dari simulasi ini.');
     }
 
     if (tips.length === 0) {
       addTip(
         'ok',
-        `Prediksi sebesar ${formatRupiah(predictedExpense)} masih seimbang dengan budget dan target tabungan yang Anda masukkan.`
+        `Rencana pengeluaran ${formatRupiah(predictedExpense)} masih seimbang dengan budget dan pemasukanmu.`
       );
     }
 
@@ -377,6 +359,11 @@ export default function PredictPage() {
       flex,
       predictedExpense,
       saveAmt,
+      savingTargetRemaining,
+      savingTargetMonths,
+      savingTargetAmount: targetAmount,
+      savingPocketName: savingPocket?.name ?? null,
+      currentSavingBalance,
       left,
       allocationLeft,
       ratio,
@@ -389,7 +376,7 @@ export default function PredictPage() {
       tips,
       mood,
     };
-  }, [calculationForm, modelPrediction, monthlyEquivalent.expense, period]);
+  }, [calculationForm, predictionFromApi, monthlyEquivalent.expense, period, savingPocket]);
 
   // Flash animation trigger
   const triggerFlash = () => {
@@ -408,14 +395,13 @@ export default function PredictPage() {
       ...prev,
       income: summary.total_income,
       goal: summary.total_expense,
-      save: 0,
       emg: emergencyFundBalance,
       needs: categorizedPeriodExpenses.needs,
       subs: categorizedPeriodExpenses.subscriptions,
       fun: categorizedPeriodExpenses.lifestyle,
     }));
 
-    setAiResult(null);
+    setExpenseEstimate(null);
     setPredictionBaseline(null);
     setAnalyzedForm(null);
     setIsScenarioOpen(false);
@@ -437,7 +423,7 @@ export default function PredictPage() {
   // Reset to default
   const handleReset = () => {
     setForm(DEFAULT_FORM);
-    setAiResult(null);
+    setExpenseEstimate(null);
     setPredictionBaseline(null);
     setAnalyzedForm(null);
     setIsScenarioOpen(false);
@@ -445,15 +431,15 @@ export default function PredictPage() {
     toast.info('Formulir dikosongkan.');
   };
 
-  // Call the official ML backend endpoint (/api/predict)
-  const handleCalculateAi = async (values: FormState = form) => {
+  // Calculate a transparent estimate from the submitted budget fields.
+  const handleCalculateEstimate = async (values: FormState = form) => {
     if (values.income <= 0) {
       toast.error('Pendapatan bulanan harus lebih dari Rp 0.');
       return;
     }
 
     setIsLoading(true);
-    setAiResult(null);
+    setExpenseEstimate(null);
     setPredictionBaseline(null);
     setAnalyzedForm(null);
     setIsScenarioOpen(false);
@@ -462,20 +448,15 @@ export default function PredictPage() {
 
     const payload = {
       monthly_income: values.income,
-      savings_rate: values.save / Math.max(values.income, 1),
       budget_goal: values.goal,
-      subscription_services: values.subs,
       emergency_fund: values.emg,
-      ...(monthlyTransactionCount > 0 ? { transaction_count: monthlyTransactionCount } : {}),
-      discretionary_spending: values.fun,
-      essential_spending: values.needs,
-      financial_stress_level: values.stress === 'Tinggi' ? 2 : values.stress === 'Sedang' ? 1 : 0,
+      transaction_count: monthlyEquivalent.transactionCount,
+      financial_stress_level: values.stress === 'Rendah' ? 0 : values.stress === 'Tinggi' ? 2 : 1,
       income_type_Freelance: values.type === 'Freelance' ? 1 : 0,
       income_type_Mixed: values.type === 'Campuran' ? 1 : 0,
-      income_type_Salary: values.type === 'Kiriman ortu' ? 1 : 0,
-      financial_scenario_inflation: 0,
-      financial_scenario_normal: 0,
-      financial_scenario_recession: 0,
+      subscription_services: values.subs,
+      discretionary_spending: values.fun,
+      essential_spending: values.needs,
     };
 
     try {
@@ -486,18 +467,23 @@ export default function PredictPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Gagal memproses prediksi dari model AI.');
+        throw new Error('Gagal menghitung estimasi anggaran.');
       }
 
       const resJson = await response.json();
       if (resJson.status === 'success' && resJson.data) {
-        setAiResult(resJson.data);
+        if (!Number.isFinite(resJson.data.predicted_expense) || resJson.data.predicted_expense < 0) {
+          throw new Error('API mengembalikan angka estimasi yang tidak valid.');
+        }
+        setExpenseEstimate(resJson.data);
         setAnalyzedForm(values);
         setPredictionBaseline({
           sourceLabel: monthlyEquivalent.sourceLabel,
           income: values.income,
           actualIncome: monthlyEquivalent.income,
-          actualExpense: monthlyEquivalent.expense,
+          // Keep this as the actual sum for the selected period. `expense` is
+          // normalized to a 30-day pace and should not be labeled as actual.
+          actualExpense: monthlyEquivalent.sourceExpense,
           sourceIncome: monthlyEquivalent.sourceIncome,
           sourceExpense: monthlyEquivalent.sourceExpense,
           savedBalance: summary.total_saved,
@@ -505,12 +491,12 @@ export default function PredictPage() {
           observedDays: monthlyEquivalent.observedDays,
           categories: expenseCategories.slice(0, 5),
         });
-        toast.success('Estimasi model AI berhasil dihitung!');
+        toast.success('Estimasi anggaran berhasil dihitung!');
       } else {
         throw new Error(resJson.message || 'Respons API tidak valid.');
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses model prediksi.');
+      toast.error(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghitung estimasi.');
     } finally {
       const remainingLoadingTime = MIN_ANALYSIS_INDICATOR_MS - (Date.now() - requestStartedAt);
       if (remainingLoadingTime > 0) {
@@ -521,28 +507,22 @@ export default function PredictPage() {
   };
 
   // Scenario quick adjustments
-  const applyScenario = (action: 'fun' | 'save' | 'needs') => {
+  const applyScenario = (action: 'fun' | 'needs') => {
     let nextForm: FormState;
     if (action === 'fun') {
       nextForm = { ...form, fun: Math.round((form.fun * 0.8) / 1000) * 1000 };
       toast.success('Pengeluaran gaya hidup dikurangi 20%');
-    } else if (action === 'save') {
-      nextForm = {
-        ...form,
-        save: Math.min(Math.round(form.income * 0.6), form.save + Math.round(form.income * 0.05)),
-      };
-      toast.success('Target tabungan dinaikkan +5%');
     } else {
       nextForm = { ...form, needs: Math.round((form.needs * 0.9) / 1000) * 1000 };
       toast.success('Pengeluaran kebutuhan pokok dikurangi 10%');
     }
     setForm(nextForm);
-    setAiResult(null);
+    setExpenseEstimate(null);
     setPredictionBaseline(null);
     setAnalyzedForm(null);
     setIsScenarioOpen(false);
     triggerFlash();
-    void handleCalculateAi(nextForm);
+    void handleCalculateEstimate(nextForm);
   };
 
   // Circular gauge SVG calculations
@@ -555,7 +535,7 @@ export default function PredictPage() {
   const moodContent = {
     ok: {
       title: 'Keuangan Anda Sehat! 🎉',
-      desc: 'Prediksi pengeluaran, target tabungan, dan dana darurat menunjukkan kondisi yang relatif terkendali.',
+      desc: 'Rencana pengeluaran, sisa dana, dan dana darurat menunjukkan kondisi yang relatif terkendali.',
       faceColor: '#10b981',
       mouthD: 'M44 72 Q60 88 76 72',
     },
@@ -567,7 +547,7 @@ export default function PredictPage() {
     },
     bad: {
       title: 'Perlu Perhatian Segera! 🚨',
-      desc: 'Prediksi pengeluaran atau target tabungan berisiko menekan arus kas. Evaluasi kembali anggaran dan pos input.',
+      desc: 'Rencana pengeluaran berisiko menekan arus kas. Evaluasi kembali anggaran dan pos input.',
       faceColor: '#ef4444',
       mouthD: 'M44 80 Q60 66 76 80',
     },
@@ -580,13 +560,13 @@ export default function PredictPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-50/80 px-3 py-1 text-xs font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300">
             <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Simulasi & Prediksi Finansial Pintar</span>
+            <span>Simulasi Anggaran Bulanan</span>
           </div>
           <h1 className="mt-2 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
             Prediksi Pengeluaran Bulanan
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl">
-            Isi data yang tersedia atau sinkronkan dari sistem. Setelah tombol hitung ditekan, hasil analisis model akan tampil di sisi kanan.
+            Isi rencana pemasukan, pengeluaran, dan tabunganmu. Estimasi dihitung dari pos yang kamu masukkan, lalu dibandingkan dengan budget dan pemasukan.
           </p>
         </div>
 
@@ -628,7 +608,7 @@ export default function PredictPage() {
             onClick={() => setShowAiDetails(!showAiDetails)}
             className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
           >
-            <span>{showAiDetails ? 'Sembunyikan Kontrak AI' : 'Lihat Relasi Kontrak AI'}</span>
+            <span>{showAiDetails ? 'Sembunyikan cara hitung' : 'Lihat cara hitung'}</span>
             <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showAiDetails ? 'rotate-180' : ''}`} />
           </button>
         </div>
@@ -639,7 +619,7 @@ export default function PredictPage() {
               <table className="w-full min-w-[680px] border-collapse text-left text-xs">
                 <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800/70 dark:text-zinc-300">
                   <tr>
-                    <th className="px-3.5 py-2.5 font-semibold">Field Model AI</th>
+                    <th className="px-3.5 py-2.5 font-semibold">Bagian yang dihitung</th>
                     <th className="px-3.5 py-2.5 font-semibold">Sumber Sistem Web</th>
                     <th className="px-3.5 py-2.5 font-semibold">Transformasi / Aturan</th>
                   </tr>
@@ -671,7 +651,7 @@ export default function PredictPage() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Pendapatan dan Target</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Pemasukan bersih dan target tabungan Anda</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Pemasukan bersih dan batas pengeluaran bulanan</p>
               </div>
             </div>
 
@@ -691,13 +671,6 @@ export default function PredictPage() {
                 onChange={(v) => updateNumberField('goal', v)}
                 income={form.income}
                 helperText="Anggaran pengeluaran maksimal yang Anda rencanakan"
-              />
-
-              <MoneyInput
-                label="Target Tabungan Bulanan"
-                value={form.save}
-                onChange={(v) => updateNumberField('save', v)}
-                income={form.income}
               />
 
             </div>
@@ -725,7 +698,7 @@ export default function PredictPage() {
               />
               <MoneyInput
                 label="Langganan"
-                subLabel="(Wi-Fi, gym, Netflix)"
+                subLabel="(termasuk kategori Tagihan & Utilities)"
                 value={form.subs}
                 onChange={(v) => updateNumberField('subs', v)}
                 income={form.income}
@@ -820,6 +793,9 @@ export default function PredictPage() {
                     </button>
                   ))}
                 </div>
+                <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  Pilihan ini untuk konteksmu; jumlah estimasi tetap mengikuti nominal yang kamu isi.
+                </p>
               </div>
 
               {/* Beban Pikiran Finansial */}
@@ -857,14 +833,14 @@ export default function PredictPage() {
               type="button"
               size="lg"
               isLoading={isLoading}
-              onClick={() => handleCalculateAi()}
+              onClick={() => handleCalculateEstimate()}
               className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-xl shadow-blue-500/25 py-4 text-base font-black rounded-2xl"
               leftIcon={<Sparkles className="h-5 w-5" />}
             >
-              {isLoading ? 'Menghitung Model AI...' : 'Hitung Prediksi dengan Model AI'}
+              {isLoading ? 'Menghitung estimasi...' : 'Hitung Estimasi Bulanan'}
             </Button>
             <p className="mt-2 text-center text-[11px] text-zinc-400">
-              Model menganalisis input dan data transaksi yang tersedia. Hasil merupakan estimasi, bukan kepastian.
+              Pengeluaran dihitung dari kebutuhan pokok, langganan, dan gaya hidup yang kamu masukkan. Ini simulasi rencana, bukan ramalan pasti.
             </p>
           </div>
         </div>
@@ -877,10 +853,10 @@ export default function PredictPage() {
                 <LoaderCircle className="h-8 w-8 animate-spin" />
               </div>
               <h2 className="mt-5 text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Model AI sedang menganalisis
+                Sedang menghitung rencana bulanan
               </h2>
               <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Mengolah data yang Anda masukkan dan menyiapkan estimasi pengeluaran serta rekomendasi.
+                Menjumlahkan pos pengeluaran dan mencocokkannya dengan budget serta pemasukanmu.
               </p>
             </div>
           ) : hasCurrentAnalysis ? (
@@ -895,7 +871,7 @@ export default function PredictPage() {
             <div className="relative z-10 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-                  {aiResult ? 'Prediksi Model AI Bulan Depan' : 'Prediksi Pengeluaran Bulan Depan'}
+                  Estimasi Pengeluaran Bulanan
                 </span>
                 <span
                   className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
@@ -913,17 +889,21 @@ export default function PredictPage() {
               </div>
 
               <div className="text-3xl sm:text-4xl font-black tracking-tight font-number">
-                {aiResult?.predicted_expense_formatted}
+                {formatRupiah(calculation.predictedExpense)}
               </div>
 
               <div className="text-xs text-blue-100/80">
                 {calculationForm.goal <= 0 ? (
                   <span className="text-blue-100/80 font-medium">
-                    Isi batas budget untuk membandingkan hasil model dengan anggaran.
+                    Isi batas budget supaya estimasi bisa dibandingkan dengan anggaran.
                   </span>
                 ) : calculation.over > 0 ? (
                   <span className="text-rose-200 font-medium">
                     ⚠️ {formatRupiah(calculation.over)} di atas batas budget {formatRupiah(calculationForm.goal)}
+                  </span>
+                ) : calculation.predictedExpense === calculationForm.goal ? (
+                  <span className="text-amber-200 font-medium">
+                    Pengeluaran pas dengan batas budget {formatRupiah(calculationForm.goal)}
                   </span>
                 ) : (
                   <span className="text-emerald-200 font-medium">
@@ -943,7 +923,7 @@ export default function PredictPage() {
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Ke mana Uang Anda Pergi</h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Rincian mengikuti nominal input. Prediksi AI memakai model dan dapat berbeda dari total pos.
+              Ini adalah rencana pengeluaran; saran tabungan dihitung dari sisa pemasukan setelah pengeluaran.
             </p>
 
             {/* Segmented Bar */}
@@ -1027,7 +1007,7 @@ export default function PredictPage() {
                       : 'Perlu evaluasi arus kas dan anggaran'}
                 </p>
                 <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
-                  Skor indikator dihitung dari hasil model, budget, target tabungan, dan kecukupan dana darurat.
+                  Skor ringkas dari rencana pengeluaran, budget, arus kas, dana darurat, dan tingkat stres yang kamu pilih.
                 </p>
                 <div className="mt-2.5">
                   <button
@@ -1046,6 +1026,35 @@ export default function PredictPage() {
           {/* TIPS & ADVICE CARD */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 space-y-3">
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Saran untuk Anda</h2>
+            <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-3 text-xs dark:border-blue-900 dark:bg-blue-950/40">
+              <p className="font-bold text-blue-900 dark:text-blue-200">Rencana menabung bulan ini</p>
+              {calculation.left > 0 ? (
+                <p className="mt-1 leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  Dari sisa {formatRupiah(calculation.left)}, kamu bisa mulai menyisihkan sekitar <strong>{formatRupiah(calculation.saveAmt)}</strong> per bulan ke kantong “Menabung” dan menyimpan {formatRupiah(calculation.allocationLeft)} sebagai buffer untuk kebutuhan lain atau mendadak.
+                </p>
+              ) : (
+                <p className="mt-1 leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  Belum ada sisa dana untuk ditabung. Rencana pengeluaran {calculation.left < 0 ? `melebihi pemasukan ${formatRupiah(-calculation.left)}` : 'pas dengan pemasukan'}.
+                </p>
+              )}
+              {calculation.savingPocketName && calculation.savingTargetAmount > 0 && calculation.savingTargetRemaining > 0 && (
+                <p className="mt-2 leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  Kantong <strong>{calculation.savingPocketName}</strong>: saldo {formatRupiah(calculation.currentSavingBalance)} dari target {formatRupiah(calculation.savingTargetAmount)}. {calculation.savingTargetMonths
+                    ? `Kalau rutin menyisihkan nominal tadi, target diperkirakan tercapai sekitar ${calculation.savingTargetMonths} bulan.`
+                    : 'Belum bisa diperkirakan waktunya karena saat ini belum ada sisa yang bisa dialokasikan.'}
+                </p>
+              )}
+              {calculation.savingPocketName && calculation.savingTargetAmount > 0 && calculation.savingTargetRemaining === 0 && (
+                <p className="mt-2 text-zinc-700 dark:text-zinc-300">Target kantong <strong>{calculation.savingPocketName}</strong> sudah tercapai.</p>
+              )}
+              {calculation.savingPocketName && calculation.savingTargetAmount <= 0 && (
+                <p className="mt-2 text-zinc-500 dark:text-zinc-400">Kantong <strong>{calculation.savingPocketName}</strong> belum memiliki nominal target, jadi waktu pencapaiannya belum bisa diperkirakan.</p>
+              )}
+              {!calculation.savingPocketName && (
+                <p className="mt-2 text-zinc-500 dark:text-zinc-400">Belum ada kantong “Menabung” dengan target. Saran setoran di atas tetap berdasarkan sisa pemasukan.</p>
+              )}
+              <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">Saran awalnya 20% untuk tabungan dan 80% sebagai buffer. Ini perkiraan, bukan setoran otomatis, jadi jumlahnya bisa kamu sesuaikan.</p>
+            </div>
             <ul className="space-y-2 text-xs">
               {calculation.tips.map((tip, idx) => (
                 <li
@@ -1062,26 +1071,41 @@ export default function PredictPage() {
               ))}
             </ul>
 
-            {/* AI Result deep metrics if available */}
-            {aiResult && (
+            {/* Estimate details if available */}
+            {hasCurrentAnalysis && expenseEstimate && (
               <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
                 <div className="rounded-xl bg-blue-50/80 p-3.5 text-xs dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
                   <div className="flex items-center gap-1.5 font-bold text-blue-900 dark:text-blue-200">
-                    <BrainCircuit className="h-4 w-4 text-blue-600" />
-                    <span>Rekomendasi Model AI</span>
+                    <Calculator className="h-4 w-4 text-blue-600" />
+                    <span>Dasar estimasi</span>
                   </div>
-                  <p className="mt-1.5 text-zinc-700 dark:text-zinc-300 leading-relaxed">{aiResult.saran}</p>
+                  <p className="mt-1.5 text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    {expenseEstimate.meta?.source === 'ai-engineer'
+                      ? 'Estimasi dan saran mengikuti hasil model AI Engineer dari input keuangan yang dikirim. Budget dan tabungan dipakai untuk membaca dampaknya pada rencana arus kas.'
+                      : 'Total estimasi lokal adalah kebutuhan pokok + langganan + hiburan/gaya hidup. Budget dibandingkan dengan total ini. Saran tabungan dihitung dari sisa setelah pengeluaran.'}
+                  </p>
 
-                  {predictionBaseline && (
-                    <div className="mt-3 pt-2.5 border-t border-blue-200/60 dark:border-blue-900/60 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
-                      <span>Realisasi pengeluaran ({predictionBaseline.sourceLabel}):</span>
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+                    <span>Estimasi dari input saat ini:</span>
+                    <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(calculation.predictedExpense)}</strong>
+                  </div>
+
+                  {predictionBaseline && predictionBaseline.actualExpense > 0 && (
+                    <div className="mt-2 pt-2.5 border-t border-blue-200/60 dark:border-blue-900/60 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+                      <span>Pengeluaran tercatat ({predictionBaseline.sourceLabel}):</span>
                       <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(predictionBaseline.actualExpense)}</strong>
                     </div>
                   )}
 
+                  {expenseEstimate.saran && (
+                    <p className="mt-3 border-t border-blue-200/60 pt-2.5 text-[11px] leading-relaxed text-blue-900 dark:border-blue-900/60 dark:text-blue-200">
+                      <strong>Saran AI Engineer{expenseEstimate.kategori_kesehatan ? ` · ${expenseEstimate.kategori_kesehatan}` : ''}:</strong> {expenseEstimate.saran}
+                    </p>
+                  )}
+
                   <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-                    <span>Sumber: {aiResult.meta?.model || 'Linear Regression 26 Fitur'}</span>
-                    <span>MAE: Rp {aiResult.meta?.mae?.toFixed(0) || '597'}</span>
+                    <span>Metode: {expenseEstimate.meta?.model || 'Kalkulasi pos pengeluaran lokal'}</span>
+                    <span>{expenseEstimate.meta?.source === 'ai-engineer' ? 'Hasil dari model AI Engineer' : 'Hasil mengikuti nominal input'}</span>
                   </div>
                 </div>
               </div>
@@ -1091,13 +1115,13 @@ export default function PredictPage() {
           ) : (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-blue-200 bg-white p-8 text-center shadow-sm dark:border-blue-900/60 dark:bg-zinc-900/60">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
-                <BrainCircuit className="h-7 w-7" />
+                <Calculator className="h-7 w-7" />
               </div>
               <h2 className="mt-5 text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Hasil analisis akan tampil di sini
+                Estimasi akan tampil di sini
               </h2>
               <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Lengkapi data yang tersedia, lalu klik <strong>Hitung Prediksi dengan Model AI</strong> untuk mulai analisis.
+                Lengkapi pemasukan dan pos pengeluaran, lalu klik <strong>Hitung Estimasi Bulanan</strong>.
               </p>
             </div>
           )}
@@ -1152,7 +1176,7 @@ export default function PredictPage() {
               <div>
                 <span className="block text-[11px] text-zinc-400">Prediksi</span>
                 <b className="text-xs font-bold text-blue-600 dark:text-blue-400 font-number">
-                  {aiResult?.predicted_expense_formatted}
+                  {formatRupiah(calculation.predictedExpense)}
                 </b>
               </div>
               <div>
@@ -1175,7 +1199,7 @@ export default function PredictPage() {
                 Coba Skenario Cepat
               </span>
               <p className="mb-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Memilih skenario akan mengubah nominal input terkait, lalu menjalankan analisis model AI ulang.
+                Memilih skenario akan mengubah nominal input terkait, lalu menghitung ulang estimasi anggaran.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1185,14 +1209,6 @@ export default function PredictPage() {
                   className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                 >
                   ✂️ Hemat gaya hidup 20%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyScenario('save')}
-                  disabled={isLoading}
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                >
-                  📈 Tabungan +5%
                 </button>
                 <button
                   type="button"
