@@ -220,6 +220,7 @@ export default function PredictPage() {
   // Form State
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [isScenarioOpen, setIsScenarioOpen] = React.useState<boolean>(false);
+  const [showResultModal, setShowResultModal] = React.useState<boolean>(false);
   const [isHeroFlashing, setIsHeroFlashing] = React.useState<boolean>(false);
   const [showAiDetails, setShowAiDetails] = React.useState<boolean>(false);
 
@@ -491,6 +492,7 @@ export default function PredictPage() {
           observedDays: monthlyEquivalent.observedDays,
           categories: expenseCategories.slice(0, 5),
         });
+        setShowResultModal(true);
         toast.success('Estimasi anggaran berhasil dihitung!');
       } else {
         throw new Error(resJson.message || 'Respons API tidak valid.');
@@ -1025,88 +1027,103 @@ export default function PredictPage() {
 
           {/* TIPS & ADVICE CARD */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 space-y-3">
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Saran untuk Anda</h2>
-            <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-3 text-xs dark:border-blue-900 dark:bg-blue-950/40">
-              <p className="font-bold text-blue-900 dark:text-blue-200">Rencana menabung bulan ini</p>
-              {calculation.left > 0 ? (
-                <p className="mt-1 leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  Dari sisa {formatRupiah(calculation.left)}, kamu bisa mulai menyisihkan sekitar <strong>{formatRupiah(calculation.saveAmt)}</strong> per bulan ke kantong “Menabung” dan menyimpan {formatRupiah(calculation.allocationLeft)} sebagai buffer untuk kebutuhan lain atau mendadak.
-                </p>
-              ) : (
-                <p className="mt-1 leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  Belum ada sisa dana untuk ditabung. Rencana pengeluaran {calculation.left < 0 ? `melebihi pemasukan ${formatRupiah(-calculation.left)}` : 'pas dengan pemasukan'}.
-                </p>
-              )}
-              {calculation.savingPocketName && calculation.savingTargetAmount > 0 && calculation.savingTargetRemaining > 0 && (
-                <p className="mt-2 leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  Kantong <strong>{calculation.savingPocketName}</strong>: saldo {formatRupiah(calculation.currentSavingBalance)} dari target {formatRupiah(calculation.savingTargetAmount)}. {calculation.savingTargetMonths
-                    ? `Kalau rutin menyisihkan nominal tadi, target diperkirakan tercapai sekitar ${calculation.savingTargetMonths} bulan.`
-                    : 'Belum bisa diperkirakan waktunya karena saat ini belum ada sisa yang bisa dialokasikan.'}
-                </p>
-              )}
-              {calculation.savingPocketName && calculation.savingTargetAmount > 0 && calculation.savingTargetRemaining === 0 && (
-                <p className="mt-2 text-zinc-700 dark:text-zinc-300">Target kantong <strong>{calculation.savingPocketName}</strong> sudah tercapai.</p>
-              )}
-              {calculation.savingPocketName && calculation.savingTargetAmount <= 0 && (
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">Kantong <strong>{calculation.savingPocketName}</strong> belum memiliki nominal target, jadi waktu pencapaiannya belum bisa diperkirakan.</p>
-              )}
-              {!calculation.savingPocketName && (
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">Belum ada kantong “Menabung” dengan target. Saran setoran di atas tetap berdasarkan sisa pemasukan.</p>
-              )}
-              <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">Saran awalnya 20% untuk tabungan dan 80% sebagai buffer. Ini perkiraan, bukan setoran otomatis, jadi jumlahnya bisa kamu sesuaikan.</p>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                <span>💡 Saran & Rekomendasi Finansial</span>
+              </h2>
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${calculation.budgetStatus.color || 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                {calculation.budgetStatus.text}
+              </span>
             </div>
-            <ul className="space-y-2 text-xs">
-              {calculation.tips.map((tip, idx) => (
-                <li
-                  key={idx}
-                  className={`rounded-xl p-3 border-l-4 leading-relaxed ${tip.type === 'ok'
-                      ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
-                      : tip.type === 'warn'
-                        ? 'border-amber-500 bg-amber-50/60 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
-                        : 'border-rose-500 bg-rose-50/60 text-rose-900 dark:bg-rose-950/30 dark:text-rose-200'
-                    }`}
-                >
-                  {tip.text}
-                </li>
-              ))}
-            </ul>
 
-            {/* Estimate details if available */}
+            {/* Ringkasan Singkat & To the point (Bite-sized) */}
+            <div className="grid gap-2.5 sm:grid-cols-2 text-xs">
+              {/* Kartu Tabungan */}
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <p className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  <span>💰 Rencana Menabung</span>
+                </p>
+                <p className="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                  {calculation.left > 0 ? (
+                    <>
+                      Sisihkan <strong>{formatRupiah(calculation.saveAmt)}</strong> untuk tabungan, dan pertahankan <strong>{formatRupiah(calculation.allocationLeft)}</strong> sebagai buffer fleksibel.
+                    </>
+                  ) : (
+                    'Belum ada sisa dana untuk ditabung. Evaluasi pos gaya hidup atau langganan untuk menambah ruang tabungan.'
+                  )}
+                </p>
+              </div>
+
+              {/* Kartu Dana Darurat */}
+              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+                <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                  <span>🛡️ Dana Darurat</span>
+                </p>
+                <p className="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                  {calculation.emgMonths >= 3 ? (
+                    <>Aman! Cadangan cukup untuk <strong>{calculation.emgMonths.toFixed(1)} bulan</strong> pengeluaran.</>
+                  ) : (
+                    <>Cadangan cukup untuk <strong>{calculation.emgMonths.toFixed(1)} bulan</strong>. Targetkan bertahap menuju 3–6 bulan.</>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Tips Tindakan Praktis */}
+            {calculation.tips.length > 0 && (
+              <div
+                className={`rounded-xl p-3 border-l-4 text-xs leading-relaxed ${
+                  calculation.tips[0].type === 'ok'
+                    ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
+                    : calculation.tips[0].type === 'warn'
+                    ? 'border-amber-500 bg-amber-50/60 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
+                    : 'border-rose-500 bg-rose-50/60 text-rose-900 dark:bg-rose-950/30 dark:text-rose-200'
+                }`}
+              >
+                <span className="font-semibold">
+                  {calculation.tips[0].type === 'ok' ? '✨ Tips: ' : calculation.tips[0].type === 'warn' ? '⚡ Perhatian: ' : '🚨 Evaluasi: '}
+                </span>
+                {calculation.tips[0].text}
+              </div>
+            )}
+
+            {/* Dasar Estimasi */}
             {hasCurrentAnalysis && expenseEstimate && (
-              <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-                <div className="rounded-xl bg-blue-50/80 p-3.5 text-xs dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
-                  <div className="flex items-center gap-1.5 font-bold text-blue-900 dark:text-blue-200">
-                    <Calculator className="h-4 w-4 text-blue-600" />
-                    <span>Dasar estimasi</span>
+              <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+                <div className="rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700/80">
+                  <div className="flex items-center justify-between font-semibold text-zinc-800 dark:text-zinc-200">
+                    <div className="flex items-center gap-1.5">
+                      <Calculator className="h-4 w-4 text-blue-600" />
+                      <span>Dasar Estimasi</span>
+                    </div>
+                    <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                      Metode: {expenseEstimate.meta?.model || 'Linear Regression'}
+                    </span>
                   </div>
-                  <p className="mt-1.5 text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                    {expenseEstimate.meta?.source === 'ai-engineer'
-                      ? 'Estimasi dan saran mengikuti hasil model AI Engineer dari input keuangan yang dikirim. Budget dan tabungan dipakai untuk membaca dampaknya pada rencana arus kas.'
-                      : 'Total estimasi lokal adalah kebutuhan pokok + langganan + hiburan/gaya hidup. Budget dibandingkan dengan total ini. Saran tabungan dihitung dari sisa setelah pengeluaran.'}
-                  </p>
 
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
-                    <span>Estimasi dari input saat ini:</span>
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+                    <span>Estimasi pengeluaran:</span>
                     <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(calculation.predictedExpense)}</strong>
                   </div>
 
                   {predictionBaseline && predictionBaseline.actualExpense > 0 && (
-                    <div className="mt-2 pt-2.5 border-t border-blue-200/60 dark:border-blue-900/60 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+                    <div className="mt-1.5 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
                       <span>Pengeluaran tercatat ({predictionBaseline.sourceLabel}):</span>
                       <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(predictionBaseline.actualExpense)}</strong>
                     </div>
                   )}
 
                   {expenseEstimate.saran && (
-                    <p className="mt-3 border-t border-blue-200/60 pt-2.5 text-[11px] leading-relaxed text-blue-900 dark:border-blue-900/60 dark:text-blue-200">
-                      <strong>Saran AI Engineer{expenseEstimate.kategori_kesehatan ? ` · ${expenseEstimate.kategori_kesehatan}` : ''}:</strong> {expenseEstimate.saran}
+                    <p className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-700/60 text-[11.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        {expenseEstimate.kategori_kesehatan === 'Sangat Sehat' ? '🌟 Rekomendasi (Sangat Sehat): ' :
+                         expenseEstimate.kategori_kesehatan === 'Cukup Sehat' ? '👍 Rekomendasi (Cukup Sehat): ' :
+                         expenseEstimate.kategori_kesehatan === 'Perlu Perhatian' ? '⚠️ Rekomendasi (Perlu Perhatian): ' :
+                         '🚨 Rekomendasi (Kritis): '}
+                      </span>
+                      {expenseEstimate.saran}
                     </p>
                   )}
-
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-                    <span>Metode: {expenseEstimate.meta?.model || 'Kalkulasi pos pengeluaran lokal'}</span>
-                    <span>{expenseEstimate.meta?.source === 'ai-engineer' ? 'Hasil dari model AI Engineer' : 'Hasil mengikuti nominal input'}</span>
-                  </div>
                 </div>
               </div>
             )}
@@ -1127,6 +1144,106 @@ export default function PredictPage() {
           )}
         </div>
       </div>
+
+      {/* POPUP RINGKASAN HASIL ESTIMASI */}
+      {showResultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 animate-slide-up-mobile">
+            {/* Close Button X */}
+            <button
+              type="button"
+              onClick={() => setShowResultModal(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 transition"
+              aria-label="Tutup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Header */}
+            <div className="text-center pb-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 mb-3 shadow-inner">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                Ringkasan Estimasi Bulanan 🎉
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Berikut gambaran cepat kondisi finansialmu untuk bulan depan
+              </p>
+            </div>
+
+            {/* Quick Metrics Grid */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {/* Estimasi Pengeluaran */}
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/40">
+                <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                  💳 Estimasi Pengeluaran
+                </span>
+                <p className="mt-1 text-base font-bold text-zinc-900 dark:text-zinc-100 font-number">
+                  {formatRupiah(calculation.predictedExpense)}
+                </p>
+                <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${calculation.budgetStatus.color || 'bg-blue-50 text-blue-600'}`}>
+                  {calculation.budgetStatus.text}
+                </span>
+              </div>
+
+              {/* Sisa Arus Kas */}
+              <div className={`rounded-2xl border p-3.5 ${
+                calculation.left >= 0
+                  ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/30'
+                  : 'border-rose-200 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-950/30'
+              }`}>
+                <span className={`text-[11px] font-medium ${
+                  calculation.left >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+                }`}>
+                  💵 Sisa Arus Kas
+                </span>
+                <p className={`mt-1 text-base font-bold font-number ${
+                  calculation.left >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                }`}>
+                  {calculation.left >= 0 ? '+' : ''}{formatRupiah(calculation.left)}
+                </p>
+                <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  calculation.left >= 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                }`}>
+                  {calculation.left >= 0 ? 'Surplus aman' : 'Perlu evaluasi'}
+                </span>
+              </div>
+            </div>
+
+            {/* Status & Short Summary */}
+            <div className="mt-3.5 rounded-2xl border border-blue-100 bg-blue-50/60 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30 text-xs">
+              <div className="flex items-center justify-between font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                <span>
+                  {calculation.score >= 80 ? '🌟 Kondisi: Sangat Sehat' :
+                   calculation.score >= 60 ? '👍 Kondisi: Cukup Sehat' :
+                   calculation.score >= 40 ? '⚠️ Kondisi: Perlu Perhatian' :
+                   '🚨 Kondisi: Kritis'}
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                  Skor: {calculation.score}/100
+                </span>
+              </div>
+              <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                {calculation.left > 0
+                  ? `Pengeluaranmu terkontrol! Kamu memiliki surplus ${formatRupiah(calculation.left)}, disarankan menyisihkan ${formatRupiah(calculation.saveAmt)} untuk tabungan.`
+                  : `Pengeluaranmu melampaui pemasukan sebesar ${formatRupiah(-calculation.left)}. Segera tinjau pos hiburan atau langganan yang bisa dihemat.`}
+              </p>
+            </div>
+
+            {/* Bottom Button */}
+            <div className="mt-5">
+              <Button
+                type="button"
+                onClick={() => setShowResultModal(false)}
+                className="w-full justify-center rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition"
+              >
+                Oke, Paham! Lihat Detail Lengkap
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL SKENARIO CEPAT (POPUP DIALOG) */}
       {isScenarioOpen && (
