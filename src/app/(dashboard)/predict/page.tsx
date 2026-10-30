@@ -273,11 +273,10 @@ export default function PredictPage() {
       over > 0 &&
       basePlanned !== null &&
       basePlanned <= calculationForm.goal;
+    // Budget badge: always show honest status (buffer tetap masuk hitungan)
     const budgetStatus =
       calculationForm.goal <= 0
         ? { level: 'neutral', text: 'Budget belum diisi' }
-        : onlyBufferCausesOverage
-        ? { level: 'buffer', text: 'Rencana Pas (+ Cadangan Buffer)', color: 'text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/40 dark:border-blue-800' }
         : over > 0
         ? { level: 'bad', text: 'Melebihi budget', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20' }
         : predictedExpense === calculationForm.goal
@@ -302,9 +301,9 @@ export default function PredictPage() {
       if (tips.length < 3) tips.push({ type, text });
     };
     if (onlyBufferCausesOverage) {
-      // Buffer is the only reason for overage — rencana user sendiri masih dalam budget
+      // Rencana user sendiri masih dalam budget; yang melebihi hanya cadangan buffer AI
       const bufferAmt = expenseEstimate?.meta?.unplanned_risk_buffer;
-      addTip('ok', `Rencanamu sudah dalam budget! AI menyisihkan cadangan buffer${bufferAmt ? ` ${formatRupiah(bufferAmt)}` : ''} untuk pengeluaran tak terduga — bukan pengeluaran yang kamu lakukan, tapi jaga-jaga saja.`);
+      addTip('warn', `Estimasi melampaui budget karena AI menyertakan cadangan buffer tak terduga${bufferAmt ? ` ${formatRupiah(bufferAmt)}` : ''}. Rencana pengeluaranmu sendiri sebenarnya masih dalam budget — buffer ini hanya jaga-jaga, bukan pengeluaran nyata.`);
     } else if (over > 0 && left < 0) {
       addTip('bad', `Pengeluaranmu ${formatRupiah(predictedExpense)} lewat budget ${formatRupiah(calculationForm.goal)} sebesar ${formatRupiah(over)}, dan lebih besar ${formatRupiah(-left)} dari pemasukan. Cek transaksi, lalu tinjau gaya hidup atau langganan yang bisa ditunda. Jangan buru-buru memangkas kebutuhan pokok.`);
     } else if (over > 0) {
@@ -1103,6 +1102,23 @@ export default function PredictPage() {
               </div>
             )}
 
+            {/* Info Cadangan Buffer AI — tampil jika ada buffer dari API */}
+            {hasCurrentAnalysis && expenseEstimate?.meta?.unplanned_risk_buffer && expenseEstimate.meta.unplanned_risk_buffer > 0 && (
+              <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/30">
+                <p className="font-semibold text-sky-800 dark:text-sky-300 flex items-center gap-1.5 mb-1">
+                  🛟 Cadangan Buffer Tak Terduga
+                </p>
+                <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                  Estimasi ini menyertakan cadangan buffer tak terduga sebesar{' '}
+                  <strong>{formatRupiah(expenseEstimate.meta.unplanned_risk_buffer)}</strong> yang dihitung otomatis oleh AI.
+                  Dana ini bukan pengeluaran yang kamu lakukan, melainkan <em>jaga-jaga</em> untuk keperluan tak terduga.
+                  {calculation.onlyBufferCausesOverage && (
+                    <> Rencana pengeluaranmu sendiri (<strong>{formatRupiah(expenseEstimate.meta.base_planned_expense ?? 0)}</strong>) sebenarnya masih dalam budget.</>
+                  )}
+                </p>
+              </div>
+            )}
+
             {/* Dasar Estimasi */}
             {hasCurrentAnalysis && expenseEstimate && (
               <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
@@ -1177,11 +1193,13 @@ export default function PredictPage() {
 
             {/* Header */}
             <div className="text-center pb-2">
-              <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl mb-3 shadow-inner text-2xl
+              <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl mb-3 shadow-inner
                 ${calculation.score >= 80 ? 'bg-emerald-50 dark:bg-emerald-950/60' :
                   calculation.score >= 60 ? 'bg-blue-50 dark:bg-blue-950/60' :
                   calculation.score >= 40 ? 'bg-amber-50 dark:bg-amber-950/60' : 'bg-rose-50 dark:bg-rose-950/60'}`}>
-                {calculation.score >= 80 ? '🌱' : calculation.score >= 60 ? '👍' : calculation.score >= 40 ? '⚠️' : '💸'}
+                <span className="text-3xl leading-none select-none">
+                  {calculation.score >= 80 ? '🤩' : calculation.score >= 60 ? '😊' : calculation.score >= 40 ? '😅' : '😱'}
+                </span>
               </div>
               <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                 Ringkasan Estimasi Bulanan
