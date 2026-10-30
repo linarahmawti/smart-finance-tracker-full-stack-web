@@ -30,6 +30,9 @@ interface ExpenseEstimate {
   meta?: {
     model: string;
     source?: string;
+    unplanned_risk_buffer?: number;
+    raw_ai_prediction?: number;
+    base_planned_expense?: number;
   };
 }
 
@@ -264,9 +267,17 @@ export default function PredictPage() {
     const totalAllocated = safeIncome;
 
     const over = calculationForm.goal > 0 ? predictedExpense - calculationForm.goal : 0;
+    // Check if only the AI buffer causes the overage (user's planned spending is within budget)
+    const basePlanned = expenseEstimate?.meta?.base_planned_expense ?? null;
+    const onlyBufferCausesOverage =
+      over > 0 &&
+      basePlanned !== null &&
+      basePlanned <= calculationForm.goal;
     const budgetStatus =
       calculationForm.goal <= 0
         ? { level: 'neutral', text: 'Budget belum diisi' }
+        : onlyBufferCausesOverage
+        ? { level: 'buffer', text: 'Rencana Pas (+ Cadangan Buffer)', color: 'text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/40 dark:border-blue-800' }
         : over > 0
         ? { level: 'bad', text: 'Melebihi budget', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20' }
         : predictedExpense === calculationForm.goal
@@ -290,7 +301,11 @@ export default function PredictPage() {
     const addTip = (type: 'ok' | 'warn' | 'bad', text: string) => {
       if (tips.length < 3) tips.push({ type, text });
     };
-    if (over > 0 && left < 0) {
+    if (onlyBufferCausesOverage) {
+      // Buffer is the only reason for overage — rencana user sendiri masih dalam budget
+      const bufferAmt = expenseEstimate?.meta?.unplanned_risk_buffer;
+      addTip('ok', `Rencanamu sudah dalam budget! AI menyisihkan cadangan buffer${bufferAmt ? ` ${formatRupiah(bufferAmt)}` : ''} untuk pengeluaran tak terduga — bukan pengeluaran yang kamu lakukan, tapi jaga-jaga saja.`);
+    } else if (over > 0 && left < 0) {
       addTip('bad', `Pengeluaranmu ${formatRupiah(predictedExpense)} lewat budget ${formatRupiah(calculationForm.goal)} sebesar ${formatRupiah(over)}, dan lebih besar ${formatRupiah(-left)} dari pemasukan. Cek transaksi, lalu tinjau gaya hidup atau langganan yang bisa ditunda. Jangan buru-buru memangkas kebutuhan pokok.`);
     } else if (over > 0) {
       addTip('bad', `Pengeluaranmu lewat budget sebesar ${formatRupiah(over)}, tapi total rencana masih sesuai pemasukan. Cek dulu transaksi, lalu lihat pos gaya hidup atau langganan yang bisa dikurangi. Kalau budget itu hanya perkiraan awal, kamu bisa menyesuaikannya dengan kondisi sebenarnya.`);
@@ -376,8 +391,9 @@ export default function PredictPage() {
       emgMonths,
       tips,
       mood,
+      onlyBufferCausesOverage,
     };
-  }, [calculationForm, predictionFromApi, monthlyEquivalent.expense, period, savingPocket]);
+  }, [calculationForm, predictionFromApi, monthlyEquivalent.expense, period, savingPocket, expenseEstimate]);
 
   // Flash animation trigger
   const triggerFlash = () => {
@@ -1161,11 +1177,14 @@ export default function PredictPage() {
 
             {/* Header */}
             <div className="text-center pb-2">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 mb-3 shadow-inner">
-                <Sparkles className="h-6 w-6" />
+              <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl mb-3 shadow-inner text-2xl
+                ${calculation.score >= 80 ? 'bg-emerald-50 dark:bg-emerald-950/60' :
+                  calculation.score >= 60 ? 'bg-blue-50 dark:bg-blue-950/60' :
+                  calculation.score >= 40 ? 'bg-amber-50 dark:bg-amber-950/60' : 'bg-rose-50 dark:bg-rose-950/60'}`}>
+                {calculation.score >= 80 ? '🌱' : calculation.score >= 60 ? '👍' : calculation.score >= 40 ? '⚠️' : '💸'}
               </div>
               <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                Ringkasan Estimasi Bulanan 🎉
+                Ringkasan Estimasi Bulanan
               </h3>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 Berikut gambaran cepat kondisi finansialmu untuk bulan depan
@@ -1196,7 +1215,7 @@ export default function PredictPage() {
                 <span className={`text-[11px] font-medium ${
                   calculation.left >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
                 }`}>
-                  💵 Sisa Arus Kas
+                  💵 Sisa Dana Bersih
                 </span>
                 <p className={`mt-1 text-base font-bold font-number ${
                   calculation.left >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
@@ -1206,7 +1225,7 @@ export default function PredictPage() {
                 <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                   calculation.left >= 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
                 }`}>
-                  {calculation.left >= 0 ? 'Surplus aman' : 'Perlu evaluasi'}
+                  {calculation.left >= 0 ? 'Sisa Dana Aman' : 'Perlu evaluasi'}
                 </span>
               </div>
             </div>
@@ -1226,7 +1245,9 @@ export default function PredictPage() {
               </div>
               <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
                 {calculation.left > 0
-                  ? `Pengeluaranmu terkontrol! Kamu memiliki surplus ${formatRupiah(calculation.left)}, disarankan menyisihkan ${formatRupiah(calculation.saveAmt)} untuk tabungan.`
+                  ? calculation.onlyBufferCausesOverage && expenseEstimate?.meta?.unplanned_risk_buffer
+                    ? `Dengan alokasi cadangan buffer tak terduga ${formatRupiah(expenseEstimate.meta.unplanned_risk_buffer)}, kamu masih memiliki sisa dana bersih ${formatRupiah(calculation.left)} untuk ditabung!`
+                    : `Pengeluaranmu terkontrol! Kamu memiliki sisa dana bersih ${formatRupiah(calculation.left)}, disarankan menyisihkan ${formatRupiah(calculation.saveAmt)} untuk tabungan.`
                   : `Pengeluaranmu melampaui pemasukan sebesar ${formatRupiah(-calculation.left)}. Segera tinjau pos hiburan atau langganan yang bisa dihemat.`}
               </p>
             </div>
