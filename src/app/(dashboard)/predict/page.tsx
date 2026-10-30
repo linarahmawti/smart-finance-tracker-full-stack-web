@@ -278,12 +278,12 @@ export default function PredictPage() {
       calculationForm.goal <= 0
         ? { level: 'neutral', text: 'Budget belum diisi' }
         : over > 0
-        ? { level: 'bad', text: 'Melebihi budget', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20' }
-        : predictedExpense === calculationForm.goal
-          ? { level: 'warn', text: 'Pas dengan budget', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' }
-        : predictedExpense > calculationForm.goal * 0.9
-          ? { level: 'warn', text: 'Mendekati batas budget', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' }
-          : { level: 'ok', text: 'Dalam budget', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' };
+          ? { level: 'bad', text: 'Melebihi budget', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20' }
+          : predictedExpense === calculationForm.goal
+            ? { level: 'warn', text: 'Pas dengan budget', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' }
+            : predictedExpense > calculationForm.goal * 0.9
+              ? { level: 'warn', text: 'Mendekati batas budget', color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' }
+              : { level: 'ok', text: 'Dalam budget', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' };
 
     let score = 100;
     if (left < 0) score -= Math.min(35, (-left / safeIncome) * 100);
@@ -611,19 +611,45 @@ export default function PredictPage() {
       </div>
 
       {/* QUICK DATA SYNC ACCORDION */}
+      {/* QUICK DATA SYNC ACCORDION */}
       <div className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300 font-medium">
+        <div className="flex flex-col gap-3 text-xs lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 flex-1 space-y-2.5">
             <Badge variant="blue">Periode Aktif: {periodLabels[period]}</Badge>
-            <span>• Pemasukan tercatat: <strong>{formatRupiah(summary.total_income)}</strong></span>
-            <span>• Pengeluaran: <strong>{formatRupiah(summary.total_expense)}</strong></span>
-            <span>• Dana darurat tersimpan: <strong>{formatRupiah(emergencyFundBalance)}</strong></span>
-            <span>• Transaksi tercatat: <strong>{periodTransactionCount} transaksi</strong></span>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="min-w-0 rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Pemasukan tercatat</span>
+                <strong className="block break-words text-[13px] font-bold text-zinc-900 dark:text-zinc-100 font-number">
+                  {formatRupiah(summary.total_income)}
+                </strong>
+              </div>
+              <div className="min-w-0 rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Pengeluaran</span>
+                <strong className="block break-words text-[13px] font-bold text-zinc-900 dark:text-zinc-100 font-number">
+                  {formatRupiah(summary.total_expense)}
+                </strong>
+              </div>
+              <div className="min-w-0 rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Dana darurat tersimpan</span>
+                <strong className="block break-words text-[13px] font-bold text-zinc-900 dark:text-zinc-100 font-number">
+                  {formatRupiah(emergencyFundBalance)}
+                </strong>
+              </div>
+              <div className="min-w-0 rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Transaksi tercatat</span>
+                <strong className="block text-[13px] font-bold text-zinc-900 dark:text-zinc-100 font-number">
+                  {periodTransactionCount} transaksi
+                </strong>
+              </div>
+            </div>
           </div>
+
           <button
             type="button"
             onClick={() => setShowAiDetails(!showAiDetails)}
-            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            aria-expanded={showAiDetails}
+            className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-blue-100 py-2 font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:border-zinc-800 dark:text-blue-400 dark:hover:bg-zinc-800/60 lg:w-auto lg:border-0 lg:py-0 lg:hover:bg-transparent"
           >
             <span>{showAiDetails ? 'Sembunyikan cara hitung' : 'Lihat cara hitung'}</span>
             <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showAiDetails ? 'rotate-180' : ''}`} />
@@ -631,9 +657,28 @@ export default function PredictPage() {
         </div>
 
         {showAiDetails && (
-          <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-              <table className="w-full min-w-[680px] border-collapse text-left text-xs">
+          <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+            {/* Tampilan mobile: daftar kartu */}
+            <div className="space-y-2 md:hidden">
+              {featureConnections.map(([feature, source, transform]) => (
+                <div
+                  key={feature}
+                  className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800"
+                >
+                  <p className="break-all font-mono text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                    {feature}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">{source}</p>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    {transform}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Tampilan tablet/desktop: tabel */}
+            <div className="hidden overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800 md:block">
+              <table className="w-full border-collapse text-left text-xs">
                 <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800/70 dark:text-zinc-300">
                   <tr>
                     <th className="px-3.5 py-2.5 font-semibold">Bagian yang dihitung</th>
@@ -778,8 +823,8 @@ export default function PredictPage() {
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, type: t }))}
                       className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 px-3 text-xs font-bold transition-all ${form.type === t
-                          ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300 shadow-sm'
-                          : 'border-zinc-200 bg-zinc-50/50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400'
+                        ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300 shadow-sm'
+                        : 'border-zinc-200 bg-zinc-50/50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400'
                         }`}
                     >
                       <span>{t === 'Kiriman ortu' ? '🏠' : t === 'Freelance' ? '💻' : '🔀'}</span>
@@ -801,8 +846,8 @@ export default function PredictPage() {
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, eco: e }))}
                       className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 px-3 text-xs font-bold transition-all ${form.eco === e
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-300 shadow-sm'
-                          : 'border-zinc-200 bg-zinc-50/50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400'
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-300 shadow-sm'
+                        : 'border-zinc-200 bg-zinc-50/50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400'
                         }`}
                     >
                       <span>{e === 'Hemat' ? '🌱' : e === 'Sedang' ? '⚖️' : '🌤️'}</span>
@@ -827,12 +872,12 @@ export default function PredictPage() {
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, stress: s }))}
                       className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 px-3 text-xs font-bold transition-all ${form.stress === s
-                          ? s === 'Rendah'
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                            : s === 'Sedang'
-                              ? 'border-amber-600 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
-                              : 'border-rose-600 bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
-                          : 'border-zinc-200 bg-zinc-50/50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400'
+                        ? s === 'Rendah'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                          : s === 'Sedang'
+                            ? 'border-amber-600 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                            : 'border-rose-600 bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                        : 'border-zinc-200 bg-zinc-50/50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400'
                         }`}
                     >
                       <span>{s === 'Rendah' ? '😌' : s === 'Sedang' ? '😐' : '😣'}</span>
@@ -878,288 +923,286 @@ export default function PredictPage() {
             </div>
           ) : hasCurrentAnalysis ? (
             <>
-          {/* HERO SUMMARY CARD */}
-          <div
-            className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-800 p-6 text-white shadow-2xl shadow-blue-500/20 transition-transform duration-300 ${isHeroFlashing ? 'scale-[0.98] ring-4 ring-blue-400/50' : ''
-              }`}
-          >
-            {/* Background decorative circles */}
-            <div className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10 blur-xl" />
-            <div className="relative z-10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-                  Estimasi Pengeluaran Bulanan
-                </span>
-                <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
-                    calculation.budgetStatus.level === 'ok'
-                      ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30'
-                      : calculation.budgetStatus.level === 'warn'
-                        ? 'bg-amber-400/20 text-amber-200 border border-amber-400/30'
-                        : calculation.budgetStatus.level === 'neutral'
-                          ? 'bg-white/15 text-blue-100 border border-white/20'
-                          : 'bg-rose-400/20 text-rose-200 border border-rose-400/30'
-                  }`}
-                >
-                  {calculation.budgetStatus.text}
-                </span>
-              </div>
-
-              <div className="text-3xl sm:text-4xl font-black tracking-tight font-number">
-                {formatRupiah(calculation.predictedExpense)}
-              </div>
-
-              <div className="text-xs text-blue-100/80">
-                {calculationForm.goal <= 0 ? (
-                  <span className="text-blue-100/80 font-medium">
-                    Isi batas budget supaya estimasi bisa dibandingkan dengan anggaran.
-                  </span>
-                ) : calculation.over > 0 ? (
-                  <span className="text-rose-200 font-medium">
-                    ⚠️ {formatRupiah(calculation.over)} di atas batas budget {formatRupiah(calculationForm.goal)}
-                  </span>
-                ) : calculation.predictedExpense === calculationForm.goal ? (
-                  <span className="text-amber-200 font-medium">
-                    Pengeluaran pas dengan batas budget {formatRupiah(calculationForm.goal)}
-                  </span>
-                ) : (
-                  <span className="text-emerald-200 font-medium">
-                    ✓ Sisa ruang budget {formatRupiah(-calculation.over)} dari {formatRupiah(calculationForm.goal)}
-                  </span>
-                )}
-              </div>
-
-              <div className="pt-2 flex items-center justify-between border-t border-white/10 text-[11px] text-blue-200/70">
-                <span>Pemasukan: <strong>{formatRupiah(calculationForm.income)}</strong></span>
-                <span>Sisa Arus Kas: <strong>{formatRupiah(calculation.left)}</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* ALLOCATION BREAKDOWN: "KE MANA UANG ANDA PERGI" */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Ke mana Uang Anda Pergi</h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Ini adalah rencana pengeluaran; saran tabungan dihitung dari sisa pemasukan setelah pengeluaran.
-            </p>
-
-            {/* Segmented Bar */}
-            <div className="mt-3 flex h-4 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-              {calculation.parts.map((part) => {
-                const widthPercent = (Math.max(0, part.amount) / calculation.totalAllocated) * 100;
-                return (
-                  <div
-                    key={part.label}
-                    className={`h-full transition-all duration-300 ${part.bgClass}`}
-                    style={{ width: `${Math.max(0, widthPercent)}%` }}
-                    title={`${part.label}: ${formatRupiah(part.amount)}`}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Legend Breakdown */}
-            <div className="mt-4 space-y-2 text-xs">
-              {calculation.parts.map((part) => {
-                const pct = ((part.amount / Math.max(calculationForm.income, 1)) * 100).toFixed(0);
-                const isDeficit = part.amount < 0;
-                return (
-                  <div key={part.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: part.color }} />
-                      <span className="truncate text-zinc-600 dark:text-zinc-300">{part.label}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 font-number">
-                      <span className={`font-bold ${isDeficit ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-900 dark:text-zinc-100'}`}>
-                        {formatRupiah(part.amount)}
-                      </span>
-                      <span className="w-9 text-right text-zinc-400">{pct}%</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* HEALTH SCORE GAUGE */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-            <div className="flex items-center gap-5">
-              {/* Circular Ring Gauge */}
-              <div className="relative flex h-24 w-24 shrink-0 items-center justify-center">
-                <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 88 88">
-                  <circle
-                    cx="44"
-                    cy="44"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    className="text-zinc-100 dark:text-zinc-800"
-                    fill="transparent"
-                  />
-                  <circle
-                    cx="44"
-                    cy="44"
-                    r="36"
-                    stroke={scoreRingColor}
-                    strokeWidth="8"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    className="transition-all duration-500 ease-out"
-                    fill="transparent"
-                  />
-                </svg>
-                <span className="absolute text-2xl font-black font-number text-zinc-900 dark:text-zinc-100">
-                  {calculation.score}
-                </span>
-              </div>
-
-              <div>
-                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Indikator Kesehatan Finansial</h2>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  {calculation.score >= 75
-                    ? 'Indikator baik berdasarkan prediksi dan input'
-                    : calculation.score >= 50
-                      ? 'Beberapa pos perlu ditinjau'
-                      : 'Perlu evaluasi arus kas dan anggaran'}
-                </p>
-                <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
-                  Skor ringkas dari rencana pengeluaran, budget, arus kas, dana darurat, dan tingkat stres yang kamu pilih.
-                </p>
-                <div className="mt-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setIsScenarioOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-300"
-                  >
-                    <Sliders className="h-3.5 w-3.5" />
-                    <span>Coba Skenario Cepat</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* TIPS & ADVICE CARD */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                <span>💡 Saran & Rekomendasi Finansial</span>
-              </h2>
-              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${calculation.budgetStatus.color || 'bg-blue-50 text-blue-600 border-blue-200'}`}>
-                {calculation.budgetStatus.text}
-              </span>
-            </div>
-
-            {/* Ringkasan Singkat & To the point (Bite-sized) */}
-            <div className="grid gap-2.5 sm:grid-cols-2 text-xs">
-              {/* Kartu Tabungan */}
-              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30">
-                <p className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                  <span>💰 Rencana Menabung</span>
-                </p>
-                <p className="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
-                  {calculation.left > 0 ? (
-                    <>
-                      Sisihkan <strong>{formatRupiah(calculation.saveAmt)}</strong> untuk tabungan, dan pertahankan <strong>{formatRupiah(calculation.allocationLeft)}</strong> sebagai buffer fleksibel.
-                    </>
-                  ) : (
-                    'Belum ada sisa dana untuk ditabung. Evaluasi pos gaya hidup atau langganan untuk menambah ruang tabungan.'
-                  )}
-                </p>
-              </div>
-
-              {/* Kartu Dana Darurat */}
-              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/30">
-                <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                  <span>🛡️ Dana Darurat</span>
-                </p>
-                <p className="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
-                  {calculation.emgMonths >= 3 ? (
-                    <>Aman! Cadangan cukup untuk <strong>{calculation.emgMonths.toFixed(1)} bulan</strong> pengeluaran.</>
-                  ) : (
-                    <>Cadangan cukup untuk <strong>{calculation.emgMonths.toFixed(1)} bulan</strong>. Targetkan bertahap menuju 3–6 bulan.</>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {/* Tips Tindakan Praktis */}
-            {calculation.tips.length > 0 && (
+              {/* HERO SUMMARY CARD */}
               <div
-                className={`rounded-xl p-3 border-l-4 text-xs leading-relaxed ${
-                  calculation.tips[0].type === 'ok'
-                    ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
-                    : calculation.tips[0].type === 'warn'
-                    ? 'border-amber-500 bg-amber-50/60 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
-                    : 'border-rose-500 bg-rose-50/60 text-rose-900 dark:bg-rose-950/30 dark:text-rose-200'
-                }`}
+                className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-800 p-6 text-white shadow-2xl shadow-blue-500/20 transition-transform duration-300 ${isHeroFlashing ? 'scale-[0.98] ring-4 ring-blue-400/50' : ''
+                  }`}
               >
-                <span className="font-semibold">
-                  {calculation.tips[0].type === 'ok' ? '✨ Tips: ' : calculation.tips[0].type === 'warn' ? '⚡ Perhatian: ' : '🚨 Evaluasi: '}
-                </span>
-                {calculation.tips[0].text}
-              </div>
-            )}
-
-            {/* Info Cadangan Buffer AI — tampil jika ada buffer dari API */}
-            {hasCurrentAnalysis && expenseEstimate?.meta?.unplanned_risk_buffer && expenseEstimate.meta.unplanned_risk_buffer > 0 && (
-              <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/30">
-                <p className="font-semibold text-sky-800 dark:text-sky-300 flex items-center gap-1.5 mb-1">
-                  🛟 Cadangan Buffer Tak Terduga
-                </p>
-                <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
-                  Estimasi ini menyertakan cadangan buffer tak terduga sebesar{' '}
-                  <strong>{formatRupiah(expenseEstimate.meta.unplanned_risk_buffer)}</strong> yang dihitung otomatis oleh AI.
-                  Dana ini bukan pengeluaran yang kamu lakukan, melainkan <em>jaga-jaga</em> untuk keperluan tak terduga.
-                  {calculation.onlyBufferCausesOverage && (
-                    <> Rencana pengeluaranmu sendiri (<strong>{formatRupiah(expenseEstimate.meta.base_planned_expense ?? 0)}</strong>) sebenarnya masih dalam budget.</>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* Dasar Estimasi */}
-            {hasCurrentAnalysis && expenseEstimate && (
-              <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
-                <div className="rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700/80">
-                  <div className="flex items-center justify-between font-semibold text-zinc-800 dark:text-zinc-200">
-                    <div className="flex items-center gap-1.5">
-                      <Calculator className="h-4 w-4 text-blue-600" />
-                      <span>Dasar Estimasi</span>
-                    </div>
-                    <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
-                      Metode: {expenseEstimate.meta?.model || 'Linear Regression'}
+                {/* Background decorative circles */}
+                <div className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10 blur-xl" />
+                <div className="relative z-10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
+                      Estimasi Pengeluaran Bulanan
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${calculation.budgetStatus.level === 'ok'
+                        ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30'
+                        : calculation.budgetStatus.level === 'warn'
+                          ? 'bg-amber-400/20 text-amber-200 border border-amber-400/30'
+                          : calculation.budgetStatus.level === 'neutral'
+                            ? 'bg-white/15 text-blue-100 border border-white/20'
+                            : 'bg-rose-400/20 text-rose-200 border border-rose-400/30'
+                        }`}
+                    >
+                      {calculation.budgetStatus.text}
                     </span>
                   </div>
 
-                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
-                    <span>Estimasi pengeluaran:</span>
-                    <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(calculation.predictedExpense)}</strong>
+                  <div className="text-3xl sm:text-4xl font-black tracking-tight font-number">
+                    {formatRupiah(calculation.predictedExpense)}
                   </div>
 
-                  {predictionBaseline && predictionBaseline.actualExpense > 0 && (
-                    <div className="mt-1.5 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
-                      <span>Pengeluaran tercatat ({predictionBaseline.sourceLabel}):</span>
-                      <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(predictionBaseline.actualExpense)}</strong>
-                    </div>
-                  )}
-
-                  {expenseEstimate.saran && (
-                    <p className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-700/60 text-[11.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                      <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                        {expenseEstimate.kategori_kesehatan === 'Sangat Sehat' ? '🌟 Rekomendasi (Sangat Sehat): ' :
-                         expenseEstimate.kategori_kesehatan === 'Cukup Sehat' ? '👍 Rekomendasi (Cukup Sehat): ' :
-                         expenseEstimate.kategori_kesehatan === 'Perlu Perhatian' ? '⚠️ Rekomendasi (Perlu Perhatian): ' :
-                         '🚨 Rekomendasi (Kritis): '}
+                  <div className="text-xs text-blue-100/80">
+                    {calculationForm.goal <= 0 ? (
+                      <span className="text-blue-100/80 font-medium">
+                        Isi batas budget supaya estimasi bisa dibandingkan dengan anggaran.
                       </span>
-                      {expenseEstimate.saran}
-                    </p>
-                  )}
+                    ) : calculation.over > 0 ? (
+                      <span className="text-rose-200 font-medium">
+                        ⚠️ {formatRupiah(calculation.over)} di atas batas budget {formatRupiah(calculationForm.goal)}
+                      </span>
+                    ) : calculation.predictedExpense === calculationForm.goal ? (
+                      <span className="text-amber-200 font-medium">
+                        Pengeluaran pas dengan batas budget {formatRupiah(calculationForm.goal)}
+                      </span>
+                    ) : (
+                      <span className="text-emerald-200 font-medium">
+                        ✓ Sisa ruang budget {formatRupiah(-calculation.over)} dari {formatRupiah(calculationForm.goal)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-white/10 text-[11px] text-blue-200/70">
+                    <span>Pemasukan: <strong>{formatRupiah(calculationForm.income)}</strong></span>
+                    <span>Sisa Arus Kas: <strong>{formatRupiah(calculation.left)}</strong></span>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
+
+              {/* ALLOCATION BREAKDOWN: "KE MANA UANG ANDA PERGI" */}
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Ke mana Uang Anda Pergi</h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Ini adalah rencana pengeluaran; saran tabungan dihitung dari sisa pemasukan setelah pengeluaran.
+                </p>
+
+                {/* Segmented Bar */}
+                <div className="mt-3 flex h-4 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  {calculation.parts.map((part) => {
+                    const widthPercent = (Math.max(0, part.amount) / calculation.totalAllocated) * 100;
+                    return (
+                      <div
+                        key={part.label}
+                        className={`h-full transition-all duration-300 ${part.bgClass}`}
+                        style={{ width: `${Math.max(0, widthPercent)}%` }}
+                        title={`${part.label}: ${formatRupiah(part.amount)}`}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Legend Breakdown */}
+                <div className="mt-4 space-y-2 text-xs">
+                  {calculation.parts.map((part) => {
+                    const pct = ((part.amount / Math.max(calculationForm.income, 1)) * 100).toFixed(0);
+                    const isDeficit = part.amount < 0;
+                    return (
+                      <div key={part.label} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: part.color }} />
+                          <span className="truncate text-zinc-600 dark:text-zinc-300">{part.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 font-number">
+                          <span className={`font-bold ${isDeficit ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                            {formatRupiah(part.amount)}
+                          </span>
+                          <span className="w-9 text-right text-zinc-400">{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* HEALTH SCORE GAUGE */}
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+                <div className="flex items-center gap-5">
+                  {/* Circular Ring Gauge */}
+                  <div className="relative flex h-24 w-24 shrink-0 items-center justify-center">
+                    <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 88 88">
+                      <circle
+                        cx="44"
+                        cy="44"
+                        r="36"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        className="text-zinc-100 dark:text-zinc-800"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="44"
+                        cy="44"
+                        r="36"
+                        stroke={scoreRingColor}
+                        strokeWidth="8"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="round"
+                        className="transition-all duration-500 ease-out"
+                        fill="transparent"
+                      />
+                    </svg>
+                    <span className="absolute text-2xl font-black font-number text-zinc-900 dark:text-zinc-100">
+                      {calculation.score}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Indikator Kesehatan Finansial</h2>
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {calculation.score >= 75
+                        ? 'Indikator baik berdasarkan prediksi dan input'
+                        : calculation.score >= 50
+                          ? 'Beberapa pos perlu ditinjau'
+                          : 'Perlu evaluasi arus kas dan anggaran'}
+                    </p>
+                    <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+                      Skor ringkas dari rencana pengeluaran, budget, arus kas, dana darurat, dan tingkat stres yang kamu pilih.
+                    </p>
+                    <div className="mt-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsScenarioOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-300"
+                      >
+                        <Sliders className="h-3.5 w-3.5" />
+                        <span>Coba Skenario Cepat</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* TIPS & ADVICE CARD */}
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <span>💡 Saran & Rekomendasi Finansial</span>
+                  </h2>
+                  <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${calculation.budgetStatus.color || 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                    {calculation.budgetStatus.text}
+                  </span>
+                </div>
+
+                {/* Ringkasan Singkat & To the point (Bite-sized) */}
+                <div className="grid gap-2.5 sm:grid-cols-2 text-xs">
+                  {/* Kartu Tabungan */}
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30">
+                    <p className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                      <span>💰 Rencana Menabung</span>
+                    </p>
+                    <p className="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                      {calculation.left > 0 ? (
+                        <>
+                          Sisihkan <strong>{formatRupiah(calculation.saveAmt)}</strong> untuk tabungan, dan pertahankan <strong>{formatRupiah(calculation.allocationLeft)}</strong> sebagai buffer fleksibel.
+                        </>
+                      ) : (
+                        'Belum ada sisa dana untuk ditabung. Evaluasi pos gaya hidup atau langganan untuk menambah ruang tabungan.'
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Kartu Dana Darurat */}
+                  <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+                    <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                      <span>🛡️ Dana Darurat</span>
+                    </p>
+                    <p className="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                      {calculation.emgMonths >= 3 ? (
+                        <>Aman! Cadangan cukup untuk <strong>{calculation.emgMonths.toFixed(1)} bulan</strong> pengeluaran.</>
+                      ) : (
+                        <>Cadangan cukup untuk <strong>{calculation.emgMonths.toFixed(1)} bulan</strong>. Targetkan bertahap menuju 3–6 bulan.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tips Tindakan Praktis */}
+                {calculation.tips.length > 0 && (
+                  <div
+                    className={`rounded-xl p-3 border-l-4 text-xs leading-relaxed ${calculation.tips[0].type === 'ok'
+                      ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
+                      : calculation.tips[0].type === 'warn'
+                        ? 'border-amber-500 bg-amber-50/60 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
+                        : 'border-rose-500 bg-rose-50/60 text-rose-900 dark:bg-rose-950/30 dark:text-rose-200'
+                      }`}
+                  >
+                    <span className="font-semibold">
+                      {calculation.tips[0].type === 'ok' ? '✨ Tips: ' : calculation.tips[0].type === 'warn' ? '⚡ Perhatian: ' : '🚨 Evaluasi: '}
+                    </span>
+                    {calculation.tips[0].text}
+                  </div>
+                )}
+
+                {/* Info Cadangan Buffer AI — tampil jika ada buffer dari API */}
+                {hasCurrentAnalysis && expenseEstimate?.meta?.unplanned_risk_buffer && expenseEstimate.meta.unplanned_risk_buffer > 0 && (
+                  <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/30">
+                    <p className="font-semibold text-sky-800 dark:text-sky-300 flex items-center gap-1.5 mb-1">
+                      🛟 Cadangan Buffer Tak Terduga
+                    </p>
+                    <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
+                      Estimasi ini menyertakan cadangan buffer tak terduga sebesar{' '}
+                      <strong>{formatRupiah(expenseEstimate.meta.unplanned_risk_buffer)}</strong> yang dihitung otomatis oleh AI.
+                      Dana ini bukan pengeluaran yang kamu lakukan, melainkan <em>jaga-jaga</em> untuk keperluan tak terduga.
+                      {calculation.onlyBufferCausesOverage && (
+                        <> Rencana pengeluaranmu sendiri (<strong>{formatRupiah(expenseEstimate.meta.base_planned_expense ?? 0)}</strong>) sebenarnya masih dalam budget.</>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                {/* Dasar Estimasi */}
+                {hasCurrentAnalysis && expenseEstimate && (
+                  <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+                    <div className="rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700/80">
+                      <div className="flex items-center justify-between font-semibold text-zinc-800 dark:text-zinc-200">
+                        <div className="flex items-center gap-1.5">
+                          <Calculator className="h-4 w-4 text-blue-600" />
+                          <span>Dasar Estimasi</span>
+                        </div>
+                        <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                          Metode: {expenseEstimate.meta?.model || 'Linear Regression'}
+                        </span>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+                        <span>Estimasi pengeluaran:</span>
+                        <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(calculation.predictedExpense)}</strong>
+                      </div>
+
+                      {predictionBaseline && predictionBaseline.actualExpense > 0 && (
+                        <div className="mt-1.5 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+                          <span>Pengeluaran tercatat ({predictionBaseline.sourceLabel}):</span>
+                          <strong className="text-zinc-900 dark:text-zinc-100 font-number">{formatRupiah(predictionBaseline.actualExpense)}</strong>
+                        </div>
+                      )}
+
+                      {expenseEstimate.saran && (
+                        <p className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-700/60 text-[11.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                            {expenseEstimate.kategori_kesehatan === 'Sangat Sehat' ? '🌟 Rekomendasi (Sangat Sehat): ' :
+                              expenseEstimate.kategori_kesehatan === 'Cukup Sehat' ? '👍 Rekomendasi (Cukup Sehat): ' :
+                                expenseEstimate.kategori_kesehatan === 'Perlu Perhatian' ? '⚠️ Rekomendasi (Perlu Perhatian): ' :
+                                  '🚨 Rekomendasi (Kritis): '}
+                          </span>
+                          {expenseEstimate.saran}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-blue-200 bg-white p-8 text-center shadow-sm dark:border-blue-900/60 dark:bg-zinc-900/60">
@@ -1193,13 +1236,13 @@ export default function PredictPage() {
 
             {/* Header */}
             <div className="text-center pb-2">
-              <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl mb-3 shadow-inner
-                ${calculation.score >= 80 ? 'bg-emerald-50 dark:bg-emerald-950/60' :
-                  calculation.score >= 60 ? 'bg-blue-50 dark:bg-blue-950/60' :
-                  calculation.score >= 40 ? 'bg-amber-50 dark:bg-amber-950/60' : 'bg-rose-50 dark:bg-rose-950/60'}`}>
-                <span className="text-3xl leading-none select-none">
-                  {calculation.score >= 80 ? '🤩' : calculation.score >= 60 ? '😊' : calculation.score >= 40 ? '😅' : '😱'}
-                </span>
+              <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center">
+                <MoodFace
+                  mood={calculation.mood}
+                  faceColor={moodContent.faceColor}
+                  mouthD={moodContent.mouthD}
+                  className="h-20 w-20"
+                />
               </div>
               <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                 Ringkasan Estimasi Bulanan
@@ -1225,24 +1268,20 @@ export default function PredictPage() {
               </div>
 
               {/* Sisa Arus Kas */}
-              <div className={`rounded-2xl border p-3.5 ${
-                calculation.left >= 0
-                  ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/30'
-                  : 'border-rose-200 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-950/30'
-              }`}>
-                <span className={`text-[11px] font-medium ${
-                  calculation.left >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+              <div className={`rounded-2xl border p-3.5 ${calculation.left >= 0
+                ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/30'
+                : 'border-rose-200 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-950/30'
                 }`}>
+                <span className={`text-[11px] font-medium ${calculation.left >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+                  }`}>
                   💵 Sisa Dana Bersih
                 </span>
-                <p className={`mt-1 text-base font-bold font-number ${
-                  calculation.left >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                }`}>
+                <p className={`mt-1 text-base font-bold font-number ${calculation.left >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                  }`}>
                   {calculation.left >= 0 ? '+' : ''}{formatRupiah(calculation.left)}
                 </p>
-                <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  calculation.left >= 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
-                }`}>
+                <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${calculation.left >= 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                  }`}>
                   {calculation.left >= 0 ? 'Sisa Dana Aman' : 'Perlu evaluasi'}
                 </span>
               </div>
@@ -1252,10 +1291,11 @@ export default function PredictPage() {
             <div className="mt-3.5 rounded-2xl border border-blue-100 bg-blue-50/60 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30 text-xs">
               <div className="flex items-center justify-between font-semibold text-blue-900 dark:text-blue-200 mb-1">
                 <span>
-                  {calculation.score >= 80 ? '🌟 Kondisi: Sangat Sehat' :
-                   calculation.score >= 60 ? '👍 Kondisi: Cukup Sehat' :
-                   calculation.score >= 40 ? '⚠️ Kondisi: Perlu Perhatian' :
-                   '🚨 Kondisi: Kritis'}
+                  {calculation.mood === 'ok'
+                    ? '🌟 Kondisi: Sehat'
+                    : calculation.mood === 'warn'
+                      ? '⚠️ Kondisi: Perlu Perhatian'
+                      : '🚨 Kondisi: Kritis'}
                 </span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                   Skor: {calculation.score}/100
@@ -1461,5 +1501,35 @@ function MoneyInput({
         <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{helperText}</p>
       )}
     </div>
+  );
+}
+
+// Sub-component: Wajah mood (dipakai di popup ringkasan)
+interface MoodFaceProps {
+  mood: 'ok' | 'warn' | 'bad';
+  faceColor: string;
+  mouthD: string;
+  className?: string;
+}
+
+function MoodFace({ mood, faceColor, mouthD, className = 'h-24 w-24' }: MoodFaceProps) {
+  return (
+    <svg viewBox="0 0 120 120" className={`${className} drop-shadow-md`}>
+      <ellipse cx="60" cy="112" rx="30" ry="5" fill="#0f1b3d1f" />
+      <circle cx="60" cy="62" r="44" fill="#fde68a" stroke={faceColor} strokeWidth="6" />
+      <circle cx="60" cy="62" r="34" fill="none" stroke="#f59e0b" strokeOpacity="0.4" strokeWidth="2" strokeDasharray="3 5" />
+      <circle cx="46" cy="56" r="4.5" fill="#0f1b3d" />
+      <circle cx="74" cy="56" r="4.5" fill="#0f1b3d" />
+      <path d={mouthD} fill="none" stroke="#0f1b3d" strokeWidth="4" strokeLinecap="round" />
+      {mood === 'bad' && (
+        <path d="M96 30 Q102 40 96 44 Q90 40 96 30 Z" fill="#60a5fa" />
+      )}
+      {mood === 'ok' && (
+        <g stroke="#f59e0b" strokeWidth="3" strokeLinecap="round">
+          <path d="M16 22 V32 M11 27 H21" />
+          <path d="M104 14 V22 M100 18 H108" />
+        </g>
+      )}
+    </svg>
   );
 }
