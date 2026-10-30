@@ -43,7 +43,10 @@ export async function POST(request: Request) {
       const savings = readAmount(body.savings_rate, 'Rasio tabungan');
       const aiResponse = await fetch(aiEngineUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: JSON.stringify({
           monthly_income: income,
           savings_rate: income > 0 ? savings / income : 0,
