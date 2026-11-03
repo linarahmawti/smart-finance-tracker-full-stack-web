@@ -467,12 +467,11 @@ export default function PredictPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
+      const resJson = await response.json();
       if (!response.ok) {
-        throw new Error('Gagal menghitung estimasi anggaran.');
+        throw new Error(resJson.message || 'Gagal menghitung estimasi anggaran.');
       }
 
-      const resJson = await response.json();
       if (resJson.status === 'success' && resJson.data) {
         if (!Number.isFinite(resJson.data.predicted_expense) || resJson.data.predicted_expense < 0) {
           throw new Error('API mengembalikan angka estimasi yang tidak valid.');
