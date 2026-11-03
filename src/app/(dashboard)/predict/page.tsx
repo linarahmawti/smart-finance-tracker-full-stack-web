@@ -30,9 +30,6 @@ interface ExpenseEstimate {
   meta?: {
     model: string;
     source?: string;
-    unplanned_risk_buffer?: number;
-    raw_ai_prediction?: number;
-    base_planned_expense?: number;
   };
 }
 
@@ -267,13 +264,7 @@ export default function PredictPage() {
     const totalAllocated = safeIncome;
 
     const over = calculationForm.goal > 0 ? predictedExpense - calculationForm.goal : 0;
-    // Check if only the AI buffer causes the overage (user's planned spending is within budget)
-    const basePlanned = expenseEstimate?.meta?.base_planned_expense ?? null;
-    const onlyBufferCausesOverage =
-      over > 0 &&
-      basePlanned !== null &&
-      basePlanned <= calculationForm.goal;
-    // Budget badge: always show honest status (buffer tetap masuk hitungan)
+    // Budget badge compares the entered expense total with the budget.
     const budgetStatus =
       calculationForm.goal <= 0
         ? { level: 'neutral', text: 'Budget belum diisi' }
@@ -300,11 +291,7 @@ export default function PredictPage() {
     const addTip = (type: 'ok' | 'warn' | 'bad', text: string) => {
       if (tips.length < 3) tips.push({ type, text });
     };
-    if (onlyBufferCausesOverage) {
-      // Rencana user sendiri masih dalam budget; yang melebihi hanya cadangan buffer AI
-      const bufferAmt = expenseEstimate?.meta?.unplanned_risk_buffer;
-      addTip('warn', `Estimasi melampaui budget karena AI menyertakan cadangan buffer tak terduga${bufferAmt ? ` ${formatRupiah(bufferAmt)}` : ''}. Rencana pengeluaranmu sendiri sebenarnya masih dalam budget — buffer ini hanya jaga-jaga, bukan pengeluaran nyata.`);
-    } else if (over > 0 && left < 0) {
+    if (over > 0 && left < 0) {
       addTip('bad', `Pengeluaranmu ${formatRupiah(predictedExpense)} lewat budget ${formatRupiah(calculationForm.goal)} sebesar ${formatRupiah(over)}, dan lebih besar ${formatRupiah(-left)} dari pemasukan. Cek transaksi, lalu tinjau gaya hidup atau langganan yang bisa ditunda. Jangan buru-buru memangkas kebutuhan pokok.`);
     } else if (over > 0) {
       addTip('bad', `Pengeluaranmu lewat budget sebesar ${formatRupiah(over)}, tapi total rencana masih sesuai pemasukan. Cek dulu transaksi, lalu lihat pos gaya hidup atau langganan yang bisa dikurangi. Kalau budget itu hanya perkiraan awal, kamu bisa menyesuaikannya dengan kondisi sebenarnya.`);
@@ -390,7 +377,6 @@ export default function PredictPage() {
       emgMonths,
       tips,
       mood,
-      onlyBufferCausesOverage,
     };
   }, [calculationForm, predictionFromApi, monthlyEquivalent.expense, period, savingPocket, expenseEstimate]);
 
@@ -1145,23 +1131,6 @@ export default function PredictPage() {
                   </div>
                 )}
 
-                {/* Info Cadangan Buffer AI — tampil jika ada buffer dari API */}
-                {hasCurrentAnalysis && expenseEstimate?.meta?.unplanned_risk_buffer && expenseEstimate.meta.unplanned_risk_buffer > 0 && (
-                  <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/30">
-                    <p className="font-semibold text-sky-800 dark:text-sky-300 flex items-center gap-1.5 mb-1">
-                      🛟 Cadangan Buffer Tak Terduga
-                    </p>
-                    <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
-                      Estimasi ini menyertakan cadangan buffer tak terduga sebesar{' '}
-                      <strong>{formatRupiah(expenseEstimate.meta.unplanned_risk_buffer)}</strong> yang dihitung otomatis oleh AI.
-                      Dana ini bukan pengeluaran yang kamu lakukan, melainkan <em>jaga-jaga</em> untuk keperluan tak terduga.
-                      {calculation.onlyBufferCausesOverage && (
-                        <> Rencana pengeluaranmu sendiri (<strong>{formatRupiah(expenseEstimate.meta.base_planned_expense ?? 0)}</strong>) sebenarnya masih dalam budget.</>
-                      )}
-                    </p>
-                  </div>
-                )}
-
                 {/* Dasar Estimasi */}
                 {hasCurrentAnalysis && expenseEstimate && (
                   <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
@@ -1303,9 +1272,7 @@ export default function PredictPage() {
               </div>
               <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[11.5px]">
                 {calculation.left > 0
-                  ? calculation.onlyBufferCausesOverage && expenseEstimate?.meta?.unplanned_risk_buffer
-                    ? `Dengan alokasi cadangan buffer tak terduga ${formatRupiah(expenseEstimate.meta.unplanned_risk_buffer)}, kamu masih memiliki sisa dana bersih ${formatRupiah(calculation.left)} untuk ditabung!`
-                    : `Pengeluaranmu terkontrol! Kamu memiliki sisa dana bersih ${formatRupiah(calculation.left)}, disarankan menyisihkan ${formatRupiah(calculation.saveAmt)} untuk tabungan.`
+                  ? `Pengeluaranmu terkontrol! Kamu memiliki sisa dana bersih ${formatRupiah(calculation.left)}, disarankan menyisihkan ${formatRupiah(calculation.saveAmt)} untuk tabungan.`
                   : `Pengeluaranmu melampaui pemasukan sebesar ${formatRupiah(-calculation.left)}. Segera tinjau pos hiburan atau langganan yang bisa dihemat.`}
               </p>
             </div>
