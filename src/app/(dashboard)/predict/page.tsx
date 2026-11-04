@@ -8,6 +8,7 @@ import { formatRupiah, parseRupiahInput } from '@/lib/formatters';
 import { isInPeriod } from '@/lib/dateUtils';
 import { PeriodFilter } from '@/types/finance';
 import { toast } from 'sonner';
+import { PERIOD_OPTIONS } from '@/lib/constants';
 import {
   Sparkles,
   RotateCcw,
@@ -19,6 +20,7 @@ import {
   Calculator,
   ChevronDown,
   Sliders,
+  Filter,
   X,
   LoaderCircle,
 } from 'lucide-react';
@@ -96,7 +98,7 @@ const DEFAULT_FORM: FormState = {
 const MIN_ANALYSIS_INDICATOR_MS = 1400;
 
 export default function PredictPage() {
-  const { summary, pockets, categories, transactions, unifiedActivities, period } = useFinance();
+  const { summary, pockets, categories, transactions, unifiedActivities, period, setPeriod } = useFinance();
 
   // Baseline data from database transactions
   const periodTransactions = React.useMemo(
@@ -173,9 +175,18 @@ export default function PredictPage() {
       const categoryName = categoryNames.get(transaction.category_id) ?? '';
       const searchableText = `${categoryName} ${transaction.title} ${transaction.description ?? ''}`.toLowerCase();
       const amount = Number(transaction.amount);
-      if (/tagihan|utilities|utilitas|langganan|subscription|wi.?fi|internet|streaming|netflix|gym|pulsa|paket data/.test(searchableText)) {
+      const isSubscriptionCategory = /tagihan|utilities|utilitas|langganan/.test(categoryName);
+      const isLifestyleCategory = /hiburan|gaya hidup|entertainment|lifestyle/.test(categoryName);
+
+      if (
+        isSubscriptionCategory ||
+        /utilities|tagihan|utilitas|langganan|subscription|wi.?fi|internet|streaming|netflix|gym|pulsa|paket data/.test(searchableText)
+      ) {
         totals.subscriptions += amount;
-      } else if (/hiburan|entertainment|hobi|rekreasi|nongkrong|cafe|kafe|game|gaya hidup|lifestyle|liburan|tiket|bioskop/.test(searchableText)) {
+      } else if (
+        isLifestyleCategory ||
+        /hiburan|entertainment|hobi|rekreasi|nongkrong|cafe|kafe|game|gaya hidup|lifestyle|liburan|tiket|bioskop/.test(searchableText)
+      ) {
         totals.lifestyle += amount;
       } else {
         // Keep unrecognized expenses in essentials so all recorded expenses are represented.
@@ -391,6 +402,15 @@ export default function PredictPage() {
     setForm((prev) => ({ ...prev, [key]: val }));
   };
 
+  const handlePeriodChange = (nextPeriod: PeriodFilter) => {
+    setPeriod(nextPeriod);
+    setExpenseEstimate(null);
+    setPredictionBaseline(null);
+    setAnalyzedForm(null);
+    setShowResultModal(false);
+    triggerFlash();
+  };
+
   // Copy actual totals for the selected dashboard period; do not extrapolate them to 30 days.
   const handleAutoFill = () => {
     setForm((prev) => ({
@@ -540,7 +560,23 @@ export default function PredictPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative">
+            <select
+              value={period}
+              onChange={(event) => handlePeriodChange(event.target.value as PeriodFilter)}
+              aria-label="Pilih periode data"
+              className="h-9 appearance-none rounded-xl border border-zinc-200 bg-white pl-8 pr-9 text-xs font-semibold text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 focus:border-blue-500 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {PERIOD_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+          </div>
           <Button
             type="button"
             variant="outline"

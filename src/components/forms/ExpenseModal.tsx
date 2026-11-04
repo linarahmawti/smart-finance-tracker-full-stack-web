@@ -149,21 +149,31 @@ export function ExpenseModal({ isOpen, onClose, defaultPocketId }: ExpenseModalP
             ))}
           </Select>
 
-          <Select
-            label="Kategori"
-            error={errors.category_id?.message}
-            {...register('category_id')}
-          >
-            {expenseCategories.length === 0 ? (
-              <option value="">(Belum ada kategori pengeluaran)</option>
-            ) : (
-              expenseCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))
+          <Controller
+            name="category_id"
+            control={control}
+            render={({ field }) => (
+              <Select
+                label="Kategori"
+                error={errors.category_id?.message}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                ref={field.ref}
+              >
+                {expenseCategories.length === 0 ? (
+                  <option value="">(Belum ada kategori pengeluaran)</option>
+                ) : (
+                  expenseCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))
+                )}
+              </Select>
             )}
-          </Select>
+          />
         </div>
 
         {/* Tanggal */}
