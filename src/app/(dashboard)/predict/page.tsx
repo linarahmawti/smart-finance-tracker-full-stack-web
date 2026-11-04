@@ -447,65 +447,33 @@ export default function PredictPage() {
     setIsScenarioOpen(false);
     triggerFlash();
     const requestStartedAt = Date.now();
+    const predictedExpense = values.needs + values.subs + values.fun;
 
-    const payload = {
-      monthly_income: values.income,
-      budget_goal: values.goal,
-      emergency_fund: values.emg,
-      transaction_count: monthlyEquivalent.transactionCount,
-      financial_stress_level: values.stress === 'Rendah' ? 0 : values.stress === 'Tinggi' ? 2 : 1,
-      income_type_Freelance: values.type === 'Freelance' ? 1 : 0,
-      income_type_Mixed: values.type === 'Campuran' ? 1 : 0,
-      subscription_services: values.subs,
-      discretionary_spending: values.fun,
-      essential_spending: values.needs,
-    };
+    setExpenseEstimate({
+      predicted_expense: predictedExpense,
+      meta: { model: 'Perhitungan Manual', source: 'Input pengguna' },
+    });
+    setAnalyzedForm(values);
+    setPredictionBaseline({
+      sourceLabel: monthlyEquivalent.sourceLabel,
+      income: values.income,
+      actualIncome: monthlyEquivalent.income,
+      actualExpense: monthlyEquivalent.sourceExpense,
+      sourceIncome: monthlyEquivalent.sourceIncome,
+      sourceExpense: monthlyEquivalent.sourceExpense,
+      savedBalance: summary.total_saved,
+      transactionCount: monthlyEquivalent.transactionCount,
+      observedDays: monthlyEquivalent.observedDays,
+      categories: expenseCategories.slice(0, 5),
+    });
+    setShowResultModal(true);
+    toast.success('Estimasi anggaran berhasil dihitung!');
 
-    try {
-      const response = await fetch('/api/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const resJson = await response.json();
-      if (!response.ok) {
-        throw new Error(resJson.message || 'Gagal menghitung estimasi anggaran.');
-      }
-
-      if (resJson.status === 'success' && resJson.data) {
-        if (!Number.isFinite(resJson.data.predicted_expense) || resJson.data.predicted_expense < 0) {
-          throw new Error('API mengembalikan angka estimasi yang tidak valid.');
-        }
-        setExpenseEstimate(resJson.data);
-        setAnalyzedForm(values);
-        setPredictionBaseline({
-          sourceLabel: monthlyEquivalent.sourceLabel,
-          income: values.income,
-          actualIncome: monthlyEquivalent.income,
-          // Keep this as the actual sum for the selected period. `expense` is
-          // normalized to a 30-day pace and should not be labeled as actual.
-          actualExpense: monthlyEquivalent.sourceExpense,
-          sourceIncome: monthlyEquivalent.sourceIncome,
-          sourceExpense: monthlyEquivalent.sourceExpense,
-          savedBalance: summary.total_saved,
-          transactionCount: monthlyEquivalent.transactionCount,
-          observedDays: monthlyEquivalent.observedDays,
-          categories: expenseCategories.slice(0, 5),
-        });
-        setShowResultModal(true);
-        toast.success('Estimasi anggaran berhasil dihitung!');
-      } else {
-        throw new Error(resJson.message || 'Respons API tidak valid.');
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghitung estimasi.');
-    } finally {
-      const remainingLoadingTime = MIN_ANALYSIS_INDICATOR_MS - (Date.now() - requestStartedAt);
-      if (remainingLoadingTime > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remainingLoadingTime));
-      }
-      setIsLoading(false);
+    const remainingLoadingTime = MIN_ANALYSIS_INDICATOR_MS - (Date.now() - requestStartedAt);
+    if (remainingLoadingTime > 0) {
+      await new Promise((resolve) => setTimeout(resolve, remainingLoadingTime));
     }
+    setIsLoading(false);
   };
 
   // Scenario quick adjustments
