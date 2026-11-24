@@ -48,6 +48,13 @@ interface PredictionBaseline {
   categories: { name: string; amount: number; color: string }[];
 }
 
+interface MonthlyPrediction {
+  id?: string;
+  month: string;
+  predicted_expense: number;
+  budget_goal: number;
+}
+
 const periodLabels: Record<PeriodFilter, string> = {
   today: 'Hari ini',
   this_week: 'Minggu ini',
@@ -98,7 +105,33 @@ const DEFAULT_FORM: FormState = {
 const MIN_ANALYSIS_INDICATOR_MS = 1400;
 
 export default function PredictPage() {
-  const { summary, pockets, categories, transactions, unifiedActivities, period, setPeriod } = useFinance();
+  const { summary, pockets, categories, transactions, unifiedActivities, period, setPeriod, isLiveSupabase } = useFinance();
+  const [predictionHistory, setPredictionHistory] = React.useState<MonthlyPrediction[]>([]);
+  const [historyReady, setHistoryReady] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    const loadHistory = async () => {
+      if (!isLiveSupabase) {
+        const saved = localStorage.getItem('smart_finance_prediction_history');
+        if (active) setPredictionHistory(saved ? JSON.parse(saved) : []);
+        setHistoryReady(true);
+        return;
+      }
+      try {
+        const response = await fetch('/api/prediction-history');
+        if (!response.ok) throw new Error('Gagal memuat riwayat prediksi');
+        const result = await response.json();
+        if (active) setPredictionHistory(result.history ?? []);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Gagal memuat riwayat prediksi');
+      } finally {
+        if (active) setHistoryReady(true);
+      }
+    };
+    void loadHistory();
+    return () => { active = false; };
+  }, [isLiveSupabase]);
 
   // Baseline data from database transactions
   const periodTransactions = React.useMemo(
@@ -228,6 +261,23 @@ export default function PredictPage() {
     [pockets]
   );
 
+  const actualExpenseByMonth = React.useMemo(() => {
+    const totals = new Map<string, number>();
+    transactions.filter((transaction) => transaction.type === 'expense').forEach((transaction) => {
+      const month = `${transaction.transaction_date.slice(0, 7)}-01`;
+      totals.set(month, (totals.get(month) ?? 0) + Number(transaction.amount));
+    });
+    return totals;
+  }, [transactions]);
+  const thisMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+  const comparedHistory = predictionHistory
+    .map((item) => ({ ...item, actual_expense: actualExpenseByMonth.get(item.month) ?? 0 }))
+    .sort((a, b) => b.month.localeCompare(a.month));
+  const overPredictionMonths = comparedHistory.filter(
+    (item) => item.month < thisMonthKey && item.actual_expense > Number(item.predicted_expense)
+  ).length;
+  const currentPrediction = predictionHistory.find((item) => item.month === thisMonthKey);
+
   // Form State
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [isScenarioOpen, setIsScenarioOpen] = React.useState<boolean>(false);
@@ -312,6 +362,8 @@ export default function PredictPage() {
       addTip('warn', 'Isi batas budget supaya kamu bisa tahu apakah rencana pengeluaran masih sesuai anggaran.');
     } else if (predictedExpense === calculationForm.goal) {
       addTip('warn', `Pengeluaran pas dengan budget ${formatRupiah(calculationForm.goal)}. Rencanamu masih muat, tetapi belum ada ruang dari budget untuk kejutan.`);
+    } else if (predictedExpense >= calculationForm.goal * 0.9) {
+      addTip('warn', `Rencana pengeluaran sudah mendekati batas budget (${formatRupiah(predictedExpense)} dari ${formatRupiah(calculationForm.goal)}). Tinjau kembali pengeluaran yang tidak mendesak agar ada ruang untuk kebutuhan tak terduga.`);
     } else {
       addTip('ok', `Pengeluaran masih dalam budget, dengan sisa ruang ${formatRupiah(calculationForm.goal - predictedExpense)}.`);
     }
@@ -454,6 +506,30 @@ export default function PredictPage() {
   };
 
   // Calculate a transparent estimate from the submitted budget fields.
+  const saveMonthlyPrediction = async (predictedExpense: number, budgetGoal: number) => {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const payload = { month, predicted_expense: predictedExpense, budget_goal: budgetGoal };
+    try {
+      if (isLiveSupabase) {
+        const response = await fetch('/api/prediction-history', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error('Prediksi dihitung, tetapi gagal disimpan ke riwayat. Jalankan migrasi database terlebih dahulu.');
+        const result = await response.json();
+        setPredictionHistory((history) => [result.prediction, ...history.filter((item) => item.month !== month)]);
+      } else {
+        setPredictionHistory((history) => {
+          const updated = [payload, ...history.filter((item) => item.month !== month)];
+          localStorage.setItem('smart_finance_prediction_history', JSON.stringify(updated));
+          return updated;
+        });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan riwayat prediksi');
+    }
+  };
+
   const handleCalculateEstimate = async (values: FormState = form) => {
     if (values.income <= 0) {
       toast.error('Pendapatan bulanan harus lebih dari Rp 0.');
@@ -486,6 +562,7 @@ export default function PredictPage() {
       observedDays: monthlyEquivalent.observedDays,
       categories: expenseCategories.slice(0, 5),
     });
+    void saveMonthlyPrediction(predictedExpense, values.goal);
     setShowResultModal(true);
     toast.success('Estimasi anggaran berhasil dihitung!');
 
@@ -598,6 +675,47 @@ export default function PredictPage() {
           </Button>
         </div>
       </div>
+
+      {currentPrediction && (() => {
+        const actual = actualExpenseByMonth.get(thisMonthKey) ?? 0;
+        const limit = Number(currentPrediction.budget_goal) || Number(currentPrediction.predicted_expense);
+        return limit > 0 && actual >= limit * 0.9 ? (
+          <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+            <span className="text-lg" aria-hidden="true">⚠️</span>
+            <div>
+              <p className="text-sm font-bold">Pengeluaran mendekati batas maksimal</p>
+              <p className="mt-1 text-xs">Pengeluaran bulan ini {formatRupiah(actual)} dari batas {formatRupiah(limit)} ({Math.round((actual / limit) * 100)}%). Periksa transaksi dan pertimbangkan menunda pengeluaran yang tidak mendesak.</p>
+            </div>
+          </div>
+        ) : null;
+      })()}
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Riwayat Perbandingan Prediksi</h2>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Setiap bulan menyimpan prediksi terakhir. Bulan berjalan dipantau, lalu dihitung setelah bulan selesai.</p>
+          </div>
+          <div className="rounded-xl bg-blue-50 px-3 py-2 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+            <span className="text-[11px]">Bulan melewati prediksi</span>
+            <strong className="ml-2 text-lg">{overPredictionMonths}</strong>
+          </div>
+        </div>
+        {comparedHistory.length ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[520px] text-left text-xs">
+              <thead className="text-[11px] uppercase text-zinc-500"><tr><th className="pb-2">Bulan</th><th className="pb-2">Prediksi</th><th className="pb-2">Aktual</th><th className="pb-2">Status</th></tr></thead>
+              <tbody>{comparedHistory.map((item) => {
+                const exceeded = item.actual_expense > Number(item.predicted_expense);
+                const isCurrent = item.month === thisMonthKey;
+                const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(`${item.month}T00:00:00`));
+                return <tr key={item.month} className="border-t border-zinc-100 dark:border-zinc-800"><td className="py-2.5 font-medium capitalize">{monthLabel}</td><td className="py-2.5">{formatRupiah(Number(item.predicted_expense))}</td><td className="py-2.5">{formatRupiah(item.actual_expense)}</td><td className={`py-2.5 font-semibold ${isCurrent ? 'text-blue-600 dark:text-blue-400' : exceeded ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{isCurrent ? 'Berjalan' : exceeded ? 'Melebihi prediksi' : 'Sesuai prediksi'}</td></tr>;
+              })}</tbody>
+            </table>
+          </div>
+        ) : <p className="mt-4 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-800/50">Belum ada riwayat. Hitung prediksi untuk mulai mencatat pembanding bulan ini.</p>}
+        {isLiveSupabase && !historyReady && <p className="mt-2 text-[11px] text-zinc-400">Memuat riwayat…</p>}
+      </section>
 
       {/* QUICK DATA SYNC ACCORDION */}
       {/* QUICK DATA SYNC ACCORDION */}

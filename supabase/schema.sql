@@ -73,6 +73,22 @@ create table if not exists public.transfers (
     constraint check_diff_pockets check (from_pocket_id != to_pocket_id)
 );
 
+-- 6. MONTHLY PREDICTION HISTORY
+create table if not exists public.prediction_history (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade not null,
+    month date not null,
+    predicted_expense numeric(15, 2) not null default 0 check (predicted_expense >= 0),
+    budget_goal numeric(15, 2) not null default 0 check (budget_goal >= 0),
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    unique (user_id, month)
+);
+alter table public.prediction_history enable row level security;
+drop policy if exists "Users manage their prediction history" on public.prediction_history;
+create policy "Users manage their prediction history" on public.prediction_history
+    for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- =========================================================
 -- INDEXES FOR PERFORMANCE
 -- =========================================================

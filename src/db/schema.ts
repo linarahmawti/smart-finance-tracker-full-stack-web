@@ -7,6 +7,7 @@ import {
   timestamp,
   date,
   index,
+  uniqueIndex,
   check,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
@@ -149,6 +150,24 @@ export const transfers = pgTable(
     index('idx_transfers_date').on(table.transfer_date),
     check('transfers_amount_check', sql`${table.amount} > 0`),
     check('check_diff_pockets', sql`${table.from_pocket_id} != ${table.to_pocket_id}`),
+  ]
+);
+
+export const predictionHistory = pgTable(
+  'prediction_history',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    user_id: uuid('user_id').notNull(),
+    month: date('month').notNull(),
+    predicted_expense: numeric('predicted_expense', { precision: 15, scale: 2 }).default('0').notNull(),
+    budget_goal: numeric('budget_goal', { precision: 15, scale: 2 }).default('0').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_prediction_history_user_month').on(table.user_id, table.month),
+    check('prediction_history_predicted_nonnegative', sql`${table.predicted_expense} >= 0`),
+    check('prediction_history_budget_nonnegative', sql`${table.budget_goal} >= 0`),
   ]
 );
 
